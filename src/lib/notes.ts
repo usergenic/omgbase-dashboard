@@ -34,10 +34,22 @@ export function noteTitle(data: NoteData): string {
   return data.path.replace(/\.md$/i, "");
 }
 
-/** Collapse whitespace and strip simple markup for title comparison. */
+/**
+ * Collapse whitespace, strip simple markup, and fold typographic punctuation
+ * for title comparison. The renderer smart-quotes `'`/`"` and turns `--`/`...`
+ * into `–`/`…`, while frontmatter / `$title` keep the authored ASCII.
+ */
 export function normalizeHeadingText(text: string): string {
   return text
     .replace(/<[^>]+>/g, "")
+    .replace(/&#39;|&apos;|&rsquo;|&lsquo;/g, "'")
+    .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/-{2,3}/g, "-")
     .replace(/[`*_~\[\]]/g, "")
     .replace(/\s+/g, " ")
     .trim()

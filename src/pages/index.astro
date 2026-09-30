@@ -64,18 +64,22 @@ for (const project of projects) {
 }
 ---
 <Base
-  title="Notes"
   description="Recent edits, project status, and tracking notes from omgbase"
   lastChange={lastChange}
 >
   <main class="shell">
+    {/*
+      Hero disabled to reclaim vertical space. Revisit once the vault has a
+      notion of "current attention" worth surfacing here instead of a generic
+      description of the panels below.
     <section class="hero">
       <h1>What you’re tracking</h1>
       <p>
-        Live OQX slices from the notes vault — recent edits, projects by status,
+        Live OQX slices from the vault — recent edits, projects by status,
         tasks by page, and notes marked <code>tracking: true</code>.
       </p>
     </section>
+    */}
 
     <div class="grid">
       <section class="panel">

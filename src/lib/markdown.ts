@@ -1,12 +1,14 @@
 import { micromark } from "micromark";
 
-/** `#RGB`, `#RRGGBB`, or `#RRGGBBAA` — not followed by another hex digit. */
-const HEX_COLOR_RE =
-  /#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})(?![0-9A-Fa-f])/g;
+/**
+ * `#RRGGBB` or `#RRGGBBAA` — not followed by another hex digit. Three-digit
+ * `#RGB` is deliberately excluded: too many false positives (`#abc`, `#123`).
+ */
+const HEX_COLOR_RE = /#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})(?![0-9A-Fa-f])/g;
 
 /** Entire `<code>` body is a single hex color (optional surrounding whitespace). */
 const LONE_HEX_CODE_RE =
-  /<code(\s[^>]*)?>\s*(#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8}))\s*<\/code>/g;
+  /<code(\s[^>]*)?>\s*(#(?:[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8}))\s*<\/code>/g;
 
 const SKIP_TAGS = new Set([
   "code",
@@ -18,15 +20,8 @@ const SKIP_TAGS = new Set([
   "samp",
 ]);
 
-function expandHex(hex: string): string {
-  if (hex.length === 3) {
-    return `#${[...hex].map((c) => c + c).join("")}`;
-  }
-  return `#${hex}`;
-}
-
 function swatchHtml(match: string, hex: string): string {
-  const css = expandHex(hex);
+  const css = `#${hex}`;
   return `<span class="hex-color">${match}<span class="hex-swatch" style="background-color:${css}" title="${match}" aria-hidden="true"></span></span>`;
 }
 

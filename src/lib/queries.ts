@@ -54,6 +54,17 @@ export const queries = {
   },
 } as const;
 
+/**
+ * Task blocks owned by a single doc — pairs `/note/…` body checkboxes with
+ * block ids for write-back. See `bindTaskCheckboxes` in `lib/note-tasks.ts`.
+ * Kept outside `queries` because it is parameterized.
+ */
+export const docTasksQuery = {
+  query: (path: string) =>
+    `select $path, text, checked from blocks where type == "task" && $path == ${JSON.stringify(path)}`,
+  limit: 500,
+} as const;
+
 export type QueryKey = keyof typeof queries;
 
 export function formatQuerySource(key: QueryKey): string {

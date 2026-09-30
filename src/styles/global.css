@@ -94,7 +94,7 @@ a:hover {
 .grid {
   display: grid;
   gap: 1.75rem;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 @media (max-width: 860px) {
@@ -839,6 +839,27 @@ html.diff-wrap .diff-body {
 
 .task-item input[type="checkbox"]:disabled,
 .task-item input.task-pending {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+/* Live GFM checkboxes inside rendered note bodies (see lib/note-tasks.ts). */
+.prose .task-list-item {
+  list-style: none;
+  margin-left: -1.25rem;
+}
+
+.prose .task-list-item input[type="checkbox"] {
+  margin: 0 0.45rem 0 0;
+  accent-color: var(--accent);
+  vertical-align: -0.1rem;
+}
+
+.prose .task-list-item input[data-task-check] {
+  cursor: pointer;
+}
+
+.prose .task-list-item input.task-pending {
   opacity: 0.45;
   cursor: wait;
 }

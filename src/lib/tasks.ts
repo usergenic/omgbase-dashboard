@@ -1,6 +1,7 @@
 import { connectHttpEngine } from "@omgbase/sync";
-import { loadEnv } from "vite";
-import { projectNamespacePrefix, queries } from "./queries";
+import { loadOmgConfig } from "./omg";
+import { docTasksQuery, projectNamespacePrefix, queries } from "./queries";
+import type { TaskBlock } from "./note-tasks";
 
 export type TaskItem = {
   id: string;
@@ -32,22 +33,6 @@ export type TasksResult = {
   completed: TaskBucket;
   truncated: boolean;
 };
-
-function loadOmgConfig(): { url: string; repo: string; token?: string } {
-  const env = {
-    ...loadEnv(process.env.NODE_ENV ?? "development", process.cwd(), ""),
-    ...process.env,
-  };
-  const url = env.OMG_URL;
-  if (!url) {
-    throw new Error("OMG_URL is required to fetch tasks");
-  }
-  return {
-    url,
-    repo: env.OMG_REPO ?? "notes",
-    ...(env.OMG_TOKEN ? { token: env.OMG_TOKEN } : {}),
-  };
-}
 
 function pathToSlug(path: string): string {
   return path.replace(/\.md$/i, "");
@@ -225,7 +210,7 @@ export function tasksForProject(
  * buckets, each grouped by owning document (newest docs first).
  */
 export async function fetchTasks(): Promise<TasksResult> {
-  const { url, repo, token } = loadOmgConfig();
+  const { url, repo, token } = loadOmgConfig("fetch tasks");
   const client = await connectHttpEngine({
     url,
     ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
@@ -273,13 +258,39 @@ export async function fetchTasks(): Promise<TasksResult> {
   }
 }
 
+/** Task blocks owned by one doc, in the order the server returns them. */
+export async function fetchDocTasks(path: string): Promise<TaskBlock[]> {
+  const { url, repo, token } = loadOmgConfig("fetch tasks");
+  const client = await connectHttpEngine({
+    url,
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+  });
+  try {
+    const result = await client.callTool<{ hits?: TaskHit[] }>("query", {
+      query: docTasksQuery.query(normalizeVaultPath(path)),
+      limit: docTasksQuery.limit,
+      repo,
+    });
+    const blocks: TaskBlock[] = [];
+    for (const hit of result.hits ?? []) {
+      const id = asString(hit.id);
+      const text = asString(hit.text);
+      if (!id || text === undefined) continue;
+      blocks.push({ id, text, checked: asBool(hit.checked) });
+    }
+    return blocks;
+  } finally {
+    await client.close();
+  }
+}
+
 /** Check or uncheck task blocks via MCP `tasks_complete`. */
 export async function completeTasks(
   blocks: string[],
   checked = true,
 ): Promise<void> {
   if (blocks.length === 0) return;
-  const { url, repo, token } = loadOmgConfig();
+  const { url, repo, token } = loadOmgConfig("fetch tasks");
   const client = await connectHttpEngine({
     url,
     ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),

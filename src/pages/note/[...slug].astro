@@ -12,6 +12,9 @@ import {
   type NoteData,
 } from "../../lib/notes";
 import { decorateHexColors } from "../../lib/markdown";
+import { bindTaskCheckboxes } from "../../lib/note-tasks";
+import { fetchDocTasks } from "../../lib/tasks";
+import TaskWriteback from "../../components/TaskWriteback.astro";
 
 export async function getStaticPaths() {
   const [recent, projects, tracking, activity, taskDocs] = await Promise.all([
@@ -50,12 +53,26 @@ const title = noteTitle(data);
 const hrefIndex = new Map(Object.entries(noteHrefIndex as Record<string, string>));
 
 const renderedHtml = entry.rendered?.html;
-const bodyHtml =
+let bodyHtml =
   typeof renderedHtml === "string"
     ? decorateHexColors(
         prepareNoteBodyLinks(stripLeadingH1IfMatches(renderedHtml, title), hrefIndex),
       )
     : null;
+
+// Make GFM checkboxes live: pair them with omg task blocks for write-back.
+let liveTasks = 0;
+if (bodyHtml !== null && bodyHtml.includes('class="task-list-item"')) {
+  const blocks = await fetchDocTasks(data.path);
+  const bound = bindTaskCheckboxes(bodyHtml, blocks, {
+    path: data.path,
+    title,
+    slug: data.slug,
+    updatedAt: noteUpdatedAt(data),
+  });
+  bodyHtml = bound.html;
+  liveTasks = bound.bound;
+}
 ---
 <Base title={title} description={data.path}>
   <main class="note-page">
@@ -74,4 +91,5 @@ const bodyHtml =
       {bodyHtml !== null ? <div set:html={bodyHtml} /> : <Content />}
     </article>
   </main>
+  {liveTasks > 0 ? <TaskWriteback /> : null}
 </Base>

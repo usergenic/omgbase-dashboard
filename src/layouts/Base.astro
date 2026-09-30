@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import { omgRepoName } from "../lib/omg";
 
 interface Props {
   title?: string;
@@ -8,12 +9,13 @@ interface Props {
   lastChange?: string;
 }
 
+const repo = omgRepoName();
 const {
-  title = "Notes",
-  description = "Local dashboard over the omgbase notes repo",
+  title,
+  description = `Local dashboard over the omgbase \`${repo}\` repo`,
   lastChange,
 } = Astro.props;
-const pageTitle = title === "Notes" ? "Notes" : `${title} · Notes`;
+const pageTitle = title && title !== repo ? `${title} · ${repo}` : repo;
 
 const lastChangeLabel = (() => {
   if (!lastChange) return null;
@@ -43,7 +45,7 @@ const lastChangeLabel = (() => {
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="/">Notes</a>
+      <a class="brand" href="/">{repo}</a>
       <p class="tagline">
         omgbase · live queries
         {lastChangeLabel ? (

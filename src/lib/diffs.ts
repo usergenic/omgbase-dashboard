@@ -1,5 +1,5 @@
 import { connectHttpEngine } from "@omgbase/sync";
-import { loadEnv } from "vite";
+import { loadOmgConfig } from "./omg";
 
 export type DiffExcerpt = {
   from: string;
@@ -10,22 +10,6 @@ export type DiffExcerpt = {
 
 const DEFAULT_MAX_LINES = 16;
 const CONCURRENCY = 6;
-
-function loadOmgConfig(): { url: string; repo: string; token?: string } {
-  const env = {
-    ...loadEnv(process.env.NODE_ENV ?? "development", process.cwd(), ""),
-    ...process.env,
-  };
-  const url = env.OMG_URL;
-  if (!url) {
-    throw new Error("OMG_URL is required to fetch diffs");
-  }
-  return {
-    url,
-    repo: env.OMG_REPO ?? "notes",
-    ...(env.OMG_TOKEN ? { token: env.OMG_TOKEN } : {}),
-  };
-}
 
 /** Trim a unified diff to a short preview for the recent list. */
 export function excerptUnifiedDiff(
@@ -101,7 +85,7 @@ export async function fetchDiffExcerpts(
 ): Promise<Map<string, DiffExcerpt>> {
   const maxLines = opts?.maxLines ?? DEFAULT_MAX_LINES;
   const concurrency = opts?.concurrency ?? CONCURRENCY;
-  const { url, repo, token } = loadOmgConfig();
+  const { url, repo, token } = loadOmgConfig("fetch diffs");
   const client = await connectHttpEngine({
     url,
     ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),

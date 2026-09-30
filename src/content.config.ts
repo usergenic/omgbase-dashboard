@@ -1,24 +1,10 @@
 import { defineCollection, z } from "astro:content";
 import { omgLoader } from "@omgbase/astro";
-import { loadEnv } from "vite";
+import { loadOmgConfig } from "./lib/omg";
 import { queries } from "./lib/queries";
 
-const env = {
-  ...loadEnv(process.env.NODE_ENV ?? "development", process.cwd(), ""),
-  ...process.env,
-};
-
-const omgUrl = env.OMG_URL;
-if (!omgUrl) {
-  throw new Error(
-    "OMG_URL is required. Set it to your omg Streamable HTTP MCP endpoint (same as `omg … --server <url>`).",
-  );
-}
-
 const shared = {
-  url: omgUrl,
-  repo: env.OMG_REPO ?? "notes",
-  ...(env.OMG_TOKEN ? { token: env.OMG_TOKEN } : {}),
+  ...loadOmgConfig("load content collections"),
   href: ({ slug }: { slug: string }) => `/note/${slug}/`,
 } as const;
 
