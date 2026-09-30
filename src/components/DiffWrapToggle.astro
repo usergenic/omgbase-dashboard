@@ -1,0 +1,43 @@
+---
+/** Global wrap toggle for `.diff-body` in Recently edited. Preference in localStorage. */
+---
+<button
+  type="button"
+  class="diff-wrap-toggle"
+  data-diff-wrap-toggle
+  aria-pressed="false"
+  title="Toggle word wrap on diffs"
+>
+  wrap
+</button>
+
+<script is:inline>
+  (function () {
+    var KEY = "notes-dashboard:diff-wrap";
+    var root = document.documentElement;
+
+    function apply(on) {
+      root.classList.toggle("diff-wrap", on);
+      document.querySelectorAll("[data-diff-wrap-toggle]").forEach(function (btn) {
+        if (!(btn instanceof HTMLButtonElement)) return;
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.classList.toggle("is-on", on);
+      });
+    }
+
+    apply(localStorage.getItem(KEY) === "1");
+
+    document.addEventListener("click", function (event) {
+      var target = event.target;
+      if (!(target instanceof Element)) return;
+      var btn = target.closest("[data-diff-wrap-toggle]");
+      if (!(btn instanceof HTMLButtonElement)) return;
+      event.preventDefault();
+      var next = !root.classList.contains("diff-wrap");
+      try {
+        localStorage.setItem(KEY, next ? "1" : "0");
+      } catch (_) {}
+      apply(next);
+    });
+  })();
+</script>

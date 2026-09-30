@@ -1,0 +1,233 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../layouts/Base.astro";
+import QueryHint from "../components/QueryHint.astro";
+import CopyPath from "../components/CopyPath.astro";
+import {
+  activityForProject,
+  formatWhen,
+  noteTitle,
+  noteUpdatedAt,
+  projectPriorityRank,
+  projectStatusRank,
+  type NoteData,
+} from "../lib/notes";
+import { formatProjectsPanelQuery, formatTasksPanelQuery } from "../lib/queries";
+import { fetchDiffExcerpts } from "../lib/diffs";
+import { fetchTasks, tasksForProject } from "../lib/tasks";
+import DiffExcerpt from "../components/DiffExcerpt.astro";
+import DiffWrapToggle from "../components/DiffWrapToggle.astro";
+import TaskTree from "../components/TaskTree.astro";
+import ProjectTasks from "../components/ProjectTasks.astro";
+import TaskWriteback from "../components/TaskWriteback.astro";
+
+const recent = (await getCollection("recent")).sort((a, b) =>
+  String(noteUpdatedAt(b.data as NoteData) ?? "").localeCompare(
+    String(noteUpdatedAt(a.data as NoteData) ?? ""),
+  ),
+);
+
+const recentDiffs = await fetchDiffExcerpts(recent.map((e) => e.id));
+const tasks = await fetchTasks();
+
+const projects = (await getCollection("projects")).sort((a, b) => {
+  const ra = projectStatusRank(a.data.status);
+  const rb = projectStatusRank(b.data.status);
+  if (ra !== rb) return ra - rb;
+  const pa = projectPriorityRank(a.data.priority);
+  const pb = projectPriorityRank(b.data.priority);
+  if (pa !== pb) return pa - pb;
+  return noteTitle(a.data as NoteData).localeCompare(noteTitle(b.data as NoteData));
+});
+
+const tracking = (await getCollection("tracking")).sort((a, b) =>
+  String(noteUpdatedAt(b.data as NoteData) ?? "").localeCompare(
+    String(noteUpdatedAt(a.data as NoteData) ?? ""),
+  ),
+);
+
+const activityDocs = (await getCollection("activity")).map((e) => e.data as NoteData);
+
+const lastChange = recent.reduce<string | undefined>((best, entry) => {
+  const at = noteUpdatedAt(entry.data as NoteData);
+  if (!at) return best;
+  if (!best || at > best) return at;
+  return best;
+}, undefined);
+
+const byStatus = new Map<string, typeof projects>();
+for (const project of projects) {
+  const key = project.data.status ?? "unspecified";
+  const bucket = byStatus.get(key) ?? [];
+  bucket.push(project);
+  byStatus.set(key, bucket);
+}
+---
+<Base
+  title="Notes"
+  description="Recent edits, project status, and tracking notes from omgbase"
+  lastChange={lastChange}
+>
+  <main class="shell">
+    <section class="hero">
+      <h1>What you’re tracking</h1>
+      <p>
+        Live OQX slices from the notes vault — recent edits, projects by status,
+        tasks by page, and notes marked <code>tracking: true</code>.
+      </p>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-tools">
+          <DiffWrapToggle />
+          <QueryHint collection="recent" />
+        </div>
+        <h2>Recently edited</h2>
+        {recent.length === 0 ? (
+          <p class="empty">No recent docs loaded.</p>
+        ) : (
+          <ul class="list">
+            {recent.map((entry) => {
+              const data = entry.data as NoteData;
+              const when = formatWhen(noteUpdatedAt(data));
+              const diff = recentDiffs.get(entry.id);
+              return (
+                <li class="recent-item">
+                  <a class="item-link" href={`/note/${data.slug}/`}>
+                    <span class="item-title">{noteTitle(data)}</span>
+                  </a>
+                  <span class="item-meta">
+                    <span class="path-row">
+                      <span class="path-text">{data.path}</span>
+                      <CopyPath path={data.path} />
+                    </span>
+                    {when ? <span>{when}</span> : null}
+                  </span>
+                  {diff ? (
+                    <DiffExcerpt
+                      text={diff.excerpt}
+                      truncated={diff.truncated}
+                      from={diff.from}
+                      to={diff.to}
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      <div>
+        <section class="panel">
+          <QueryHint source={formatProjectsPanelQuery()} />
+          <h2>Projects</h2>
+          {projects.length === 0 ? (
+            <p class="empty">No projects loaded.</p>
+          ) : (
+            [...byStatus.entries()].map(([status, items]) => (
+              <details class="status-group" open={status === "active" ? true : undefined}>
+                <summary>
+                  <span class={`badge ${status}`}>{status}</span>
+                  <span class="status-count">{items.length}</span>
+                </summary>
+                <ul class="list project-list">
+                  {items.map((entry) => {
+                    const data = entry.data as NoteData;
+                    const activity = activityForProject(data.path, activityDocs);
+                    const projectTasks = tasksForProject(data.path, tasks.open.groups);
+                    const priority =
+                      typeof data.priority === "number" ? data.priority : null;
+                    return (
+                      <li class="project-card">
+                        <a class="project-link item-link" href={`/note/${data.slug}/`}>
+                          <span class="item-title">
+                            {noteTitle(data)}
+                            {priority !== null ? (
+                              <span class="priority-mark" title={`priority ${priority}`}>
+                                #{priority}
+                              </span>
+                            ) : null}
+                          </span>
+                        </a>
+                        <span class="item-meta">
+                          <span class="path-row">
+                            <span class="path-text">{data.path}</span>
+                            <CopyPath path={data.path} />
+                          </span>
+                        </span>
+                        <ProjectTasks groups={projectTasks} />
+                        {activity.length > 0 ? (
+                          <ul class="activity-list">
+                            {activity.map((item) => {
+                              const when = formatWhen(item.updatedAt);
+                              return (
+                                <li>
+                                  <a class="item-link" href={`/note/${item.slug}/`}>
+                                    <span class="activity-title">{item.title}</span>
+                                  </a>
+                                  <span class="item-meta">
+                                    <span class="path-row">
+                                      <span class="path-text">{item.path}</span>
+                                      <CopyPath path={item.path} />
+                                    </span>
+                                    {when ? <span>{when}</span> : null}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </details>
+            ))
+          )}
+        </section>
+
+        <section class="panel" style="margin-top:2rem;">
+          <QueryHint collection="tracking" />
+          <h2>Tracking</h2>
+          {tracking.length === 0 ? (
+            <p class="empty">No tracking notes.</p>
+          ) : (
+            <ul class="list">
+              {tracking.map((entry) => {
+                const data = entry.data as NoteData;
+                const when = formatWhen(noteUpdatedAt(data));
+                return (
+                  <li>
+                    <a class="item-link" href={`/note/${data.slug}/`}>
+                      <span class="item-title">{noteTitle(data)}</span>
+                    </a>
+                    <span class="item-meta">
+                      <span class="path-row">
+                        <span class="path-text">{data.path}</span>
+                        <CopyPath path={data.path} />
+                      </span>
+                      {when ? <span>{when}</span> : null}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </div>
+    </div>
+
+    <section class="panel tasks-panel">
+      <QueryHint source={formatTasksPanelQuery()} />
+      <h2>Tasks</h2>
+      <TaskTree
+        open={tasks.open}
+        completed={tasks.completed}
+        truncated={tasks.truncated}
+      />
+    </section>
+  </main>
+  <TaskWriteback />
+</Base>

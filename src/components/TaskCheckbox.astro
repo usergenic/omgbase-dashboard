@@ -1,0 +1,41 @@
+---
+import { renderInlineMarkdown } from "../lib/markdown";
+
+interface Props {
+  id: string;
+  text: string;
+  checked?: boolean;
+  path: string;
+  title: string;
+  slug: string;
+  section?: string;
+  updatedAt?: string;
+}
+
+const {
+  id,
+  text,
+  checked = false,
+  path,
+  title,
+  slug,
+  section = "",
+  updatedAt = "",
+} = Astro.props;
+---
+<li data-task-li>
+  <label class="task-item">
+    <input
+      type="checkbox"
+      checked={checked || undefined}
+      data-task-check
+      data-block={id}
+      data-path={path}
+      data-title={title}
+      data-slug={slug}
+      data-section={section}
+      data-updated={updatedAt}
+    />
+    <span data-task-text class="task-text" set:html={renderInlineMarkdown(text)} />
+  </label>
+</li>

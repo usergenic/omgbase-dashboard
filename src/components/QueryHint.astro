@@ -1,0 +1,23 @@
+---
+import { formatQuerySource, type QueryKey } from "../lib/queries";
+
+interface Props {
+  collection?: QueryKey;
+  /** Override / multi-query label body. Wins over `collection` when set. */
+  source?: string;
+  class?: string;
+}
+
+const { collection, source: sourceProp, class: className } = Astro.props;
+const source =
+  sourceProp ??
+  (collection ? formatQuerySource(collection) : "");
+if (!source) {
+  throw new Error("QueryHint requires `collection` or `source`");
+}
+const classes = ["query-hint", className].filter(Boolean).join(" ");
+---
+<details class={classes}>
+  <summary title="Show OQX query">q</summary>
+  <pre class="query-pop"><code>{source}</code></pre>
+</details>

@@ -1,0 +1,142 @@
+---
+import CopyPath from "./CopyPath.astro";
+import TaskCheckbox from "./TaskCheckbox.astro";
+import { formatWhen } from "../lib/notes";
+import { sectionRuns, type TaskBucket } from "../lib/tasks";
+
+interface Props {
+  open: TaskBucket;
+  completed: TaskBucket;
+  truncated?: boolean;
+}
+
+const { open, completed, truncated = false } = Astro.props;
+---
+<div class="tasks-board" data-tasks-board>
+  <details class="task-bucket" open data-task-bucket="open">
+    <summary class="task-bucket-summary">
+      <span class="badge">Open</span>
+      <span class="status-count" data-bucket-count>
+        {open.total}{truncated ? "+" : ""}
+        {" · "}
+        {open.groups.length} notes
+      </span>
+    </summary>
+    {open.groups.length === 0 ? (
+      <p class="empty">No open tasks.</p>
+    ) : (
+      <div class="task-tree" data-task-tree>
+        {open.groups.map((group) => (
+          <details
+            class="task-doc"
+            data-task-doc
+            data-path={group.path}
+            data-title={group.title}
+            data-slug={group.slug}
+            data-updated={group.updatedAt ?? ""}
+          >
+            <summary>
+              <a class="task-doc-link" href={`/note/${group.slug}/`} data-stop-toggle>
+                <span class="item-title">{group.title}</span>
+              </a>
+              <span class="status-count" data-doc-count>{group.tasks.length}</span>
+              <span class="path-row task-doc-path">
+                <span class="path-text">{group.path}</span>
+                <CopyPath path={group.path} />
+                {formatWhen(group.updatedAt) ? (
+                  <span data-doc-when>{formatWhen(group.updatedAt)}</span>
+                ) : null}
+              </span>
+            </summary>
+            <div class="task-doc-body">
+              {sectionRuns(group.tasks).map((run) => (
+                <div class="task-section" data-task-section={run.section ?? ""}>
+                  {run.section ? (
+                    <h3 class="task-section-heading">{run.section}</h3>
+                  ) : null}
+                  <ul class="task-list">
+                    {run.tasks.map((task) => (
+                      <TaskCheckbox
+                        id={task.id}
+                        text={task.text}
+                        path={group.path}
+                        title={group.title}
+                        slug={group.slug}
+                        section={task.section}
+                        updatedAt={group.updatedAt}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    )}
+  </details>
+
+  <details class="task-bucket" data-task-bucket="completed">
+    <summary class="task-bucket-summary">
+      <span class="badge completed">Completed</span>
+      <span class="status-count" data-bucket-count>
+        {completed.total}
+        {" · "}
+        {completed.groups.length} notes
+      </span>
+    </summary>
+    {completed.groups.length === 0 ? (
+      <p class="empty">No completed tasks.</p>
+    ) : (
+      <div class="task-tree" data-task-tree>
+        {completed.groups.map((group) => (
+          <details
+            class="task-doc"
+            data-task-doc
+            data-path={group.path}
+            data-title={group.title}
+            data-slug={group.slug}
+            data-updated={group.updatedAt ?? ""}
+          >
+            <summary>
+              <a class="task-doc-link" href={`/note/${group.slug}/`} data-stop-toggle>
+                <span class="item-title">{group.title}</span>
+              </a>
+              <span class="status-count" data-doc-count>{group.tasks.length}</span>
+              <span class="path-row task-doc-path">
+                <span class="path-text">{group.path}</span>
+                <CopyPath path={group.path} />
+                {formatWhen(group.updatedAt) ? (
+                  <span data-doc-when>{formatWhen(group.updatedAt)}</span>
+                ) : null}
+              </span>
+            </summary>
+            <div class="task-doc-body">
+              {sectionRuns(group.tasks).map((run) => (
+                <div class="task-section" data-task-section={run.section ?? ""}>
+                  {run.section ? (
+                    <h3 class="task-section-heading">{run.section}</h3>
+                  ) : null}
+                  <ul class="task-list">
+                    {run.tasks.map((task) => (
+                      <TaskCheckbox
+                        id={task.id}
+                        text={task.text}
+                        checked
+                        path={group.path}
+                        title={group.title}
+                        slug={group.slug}
+                        section={task.section}
+                        updatedAt={group.updatedAt}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    )}
+  </details>
+</div>

@@ -1,0 +1,77 @@
+---
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import CopyPath from "../../components/CopyPath.astro";
+import {
+  buildNoteHrefIndex,
+  formatWhen,
+  noteTitle,
+  noteUpdatedAt,
+  prepareNoteBodyLinks,
+  stripLeadingH1IfMatches,
+  type NoteData,
+} from "../../lib/notes";
+import { decorateHexColors } from "../../lib/markdown";
+
+export async function getStaticPaths() {
+  const [recent, projects, tracking, activity, taskDocs] = await Promise.all([
+    getCollection("recent"),
+    getCollection("projects"),
+    getCollection("tracking"),
+    getCollection("activity"),
+    getCollection("taskDocs"),
+  ]);
+
+  const byId = new Map<string, (typeof recent)[number]>();
+  for (const entry of [
+    ...recent,
+    ...projects,
+    ...tracking,
+    ...activity,
+    ...taskDocs,
+  ]) {
+    byId.set(entry.id, entry);
+  }
+
+  const entries = [...byId.values()];
+  const noteHrefIndex = Object.fromEntries(buildNoteHrefIndex(entries));
+
+  return entries.map((entry) => ({
+    params: { slug: entry.data.slug },
+    props: { entry, noteHrefIndex },
+  }));
+}
+
+const { entry, noteHrefIndex } = Astro.props;
+const data = entry.data as NoteData;
+const { Content } = await render(entry);
+const when = formatWhen(noteUpdatedAt(data));
+const title = noteTitle(data);
+const hrefIndex = new Map(Object.entries(noteHrefIndex as Record<string, string>));
+
+const renderedHtml = entry.rendered?.html;
+const bodyHtml =
+  typeof renderedHtml === "string"
+    ? decorateHexColors(
+        prepareNoteBodyLinks(stripLeadingH1IfMatches(renderedHtml, title), hrefIndex),
+      )
+    : null;
+---
+<Base title={title} description={data.path}>
+  <main class="note-page">
+    <a class="back" href="/">← Dashboard</a>
+    <h1>{title}</h1>
+    <p class="note-meta">
+      <span class="path-row">
+        <span class="path-text">{data.path}</span>
+        <CopyPath path={data.path} />
+      </span>
+      {data.status ? <span>· {data.status}</span> : null}
+      {data.layer ? <span>· {data.layer}</span> : null}
+      {when ? <span>· {when}</span> : null}
+    </p>
+    <article class="prose">
+      {bodyHtml !== null ? <div set:html={bodyHtml} /> : <Content />}
+    </article>
+  </main>
+</Base>

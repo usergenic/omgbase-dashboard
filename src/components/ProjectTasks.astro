@@ -1,0 +1,77 @@
+---
+import CopyPath from "./CopyPath.astro";
+import TaskCheckbox from "./TaskCheckbox.astro";
+import { formatWhen } from "../lib/notes";
+import { sectionRuns, type TaskDocGroup } from "../lib/tasks";
+
+interface Props {
+  groups: TaskDocGroup[];
+}
+
+const { groups } = Astro.props;
+const total = groups.reduce((n, g) => n + g.tasks.length, 0);
+---
+{
+  total === 0 ? null : (
+    <details class="project-tasks" data-project-tasks>
+      <summary>
+        <span class="project-tasks-label">
+          {total} open task{total === 1 ? "" : "s"}
+        </span>
+        <span class="status-count">{groups.length} note{groups.length === 1 ? "" : "s"}</span>
+      </summary>
+      <div class="project-tasks-body">
+        {groups.map((group) => (
+          <details
+            class="task-doc project-task-doc"
+            data-task-doc
+            data-path={group.path}
+            data-title={group.title}
+            data-slug={group.slug}
+            data-updated={group.updatedAt ?? ""}
+          >
+            <summary>
+              <a
+                class="task-doc-link"
+                href={`/note/${group.slug}/`}
+                data-stop-toggle
+              >
+                <span class="item-title">{group.title}</span>
+              </a>
+              <span class="status-count" data-doc-count>{group.tasks.length}</span>
+              <span class="path-row task-doc-path">
+                <span class="path-text">{group.path}</span>
+                <CopyPath path={group.path} />
+                {formatWhen(group.updatedAt) ? (
+                  <span data-doc-when>{formatWhen(group.updatedAt)}</span>
+                ) : null}
+              </span>
+            </summary>
+            <div class="task-doc-body">
+              {sectionRuns(group.tasks).map((run) => (
+                <div class="task-section" data-task-section={run.section ?? ""}>
+                  {run.section ? (
+                    <h3 class="task-section-heading">{run.section}</h3>
+                  ) : null}
+                  <ul class="task-list">
+                    {run.tasks.map((task) => (
+                      <TaskCheckbox
+                        id={task.id}
+                        text={task.text}
+                        path={group.path}
+                        title={group.title}
+                        slug={group.slug}
+                        section={task.section}
+                        updatedAt={group.updatedAt}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    </details>
+  )
+}

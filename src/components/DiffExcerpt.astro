@@ -1,0 +1,28 @@
+---
+interface Props {
+  text: string;
+  truncated?: boolean;
+  from?: string;
+  to?: string;
+}
+
+const { text, truncated = false, from, to } = Astro.props;
+const lines = text.split("\n").map((line) => {
+  let kind = "ctx";
+  if (line.startsWith("+")) kind = "add";
+  else if (line.startsWith("-")) kind = "del";
+  else if (line.startsWith("@@")) kind = "hunk";
+  return { line: line.length ? line : " ", kind };
+});
+const revLabel =
+  from && to ? `${from.slice(0, 10)} → ${to.slice(0, 10)}` : null;
+---
+<details class="diff-excerpt">
+  <summary>diff{revLabel ? ` · ${revLabel}` : ""}</summary>
+  <pre class="diff-body" aria-label="Unified diff excerpt">
+    {lines.map(({ line, kind }) => (
+      <span class={`diff-line ${kind}`}>{line}</span>
+    ))}
+    {truncated ? <span class="diff-line more">… more in history</span> : null}
+  </pre>
+</details>

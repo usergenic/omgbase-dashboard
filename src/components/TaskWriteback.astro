@@ -1,0 +1,303 @@
+---
+/** Client write-back for `[data-task-check]` — tasks board + project cards. */
+---
+<script is:inline>
+  (function () {
+    function formatWhen(iso) {
+      if (!iso) return "";
+      var d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(d);
+    }
+
+    function ensureTree(bucket) {
+      var tree = bucket.querySelector("[data-task-tree]");
+      if (tree) return tree;
+      var empty = bucket.querySelector(".empty");
+      if (empty) empty.remove();
+      tree = document.createElement("div");
+      tree.className = "task-tree";
+      tree.setAttribute("data-task-tree", "");
+      bucket.appendChild(tree);
+      return tree;
+    }
+
+    function refreshBucketCount(bucket) {
+      var tree = bucket.querySelector("[data-task-tree]");
+      var docs = tree ? tree.querySelectorAll("[data-task-doc]") : [];
+      var total = 0;
+      docs.forEach(function (doc) {
+        total += doc.querySelectorAll("[data-task-li]").length;
+      });
+      var label = bucket.querySelector("[data-bucket-count]");
+      if (label) {
+        label.textContent = total + " · " + docs.length + " notes";
+      }
+      if (total === 0) {
+        if (tree) tree.remove();
+        if (!bucket.querySelector(".empty")) {
+          var p = document.createElement("p");
+          p.className = "empty";
+          p.textContent =
+            bucket.getAttribute("data-task-bucket") === "completed"
+              ? "No completed tasks."
+              : "No open tasks.";
+          bucket.appendChild(p);
+        }
+      }
+    }
+
+    function refreshDocCount(doc) {
+      var count = doc.querySelectorAll("[data-task-li]").length;
+      var el = doc.querySelector("[data-doc-count]");
+      if (el) el.textContent = String(count);
+      if (count === 0) doc.remove();
+    }
+
+    function refreshProjectTasks(wrap) {
+      var docs = wrap.querySelectorAll("[data-task-doc]");
+      var total = 0;
+      docs.forEach(function (doc) {
+        total += doc.querySelectorAll("[data-task-li]").length;
+      });
+      var label = wrap.querySelector(".project-tasks-label");
+      var count = wrap.querySelector(":scope > summary > .status-count");
+      if (label) {
+        label.textContent =
+          total + " open task" + (total === 1 ? "" : "s");
+      }
+      if (count) {
+        count.textContent =
+          docs.length + " note" + (docs.length === 1 ? "" : "s");
+      }
+      if (total === 0) wrap.remove();
+    }
+
+    function findDoc(tree, path) {
+      var docs = tree.querySelectorAll("[data-task-doc]");
+      for (var i = 0; i < docs.length; i++) {
+        if (docs[i].getAttribute("data-path") === path) return docs[i];
+      }
+      return null;
+    }
+
+    function findSection(body, section) {
+      var key = section || "";
+      var sections = body.querySelectorAll("[data-task-section]");
+      for (var i = 0; i < sections.length; i++) {
+        if (sections[i].getAttribute("data-task-section") === key) {
+          return sections[i];
+        }
+      }
+      return null;
+    }
+
+    function findOrCreateDoc(tree, meta) {
+      var existing = findDoc(tree, meta.path);
+      if (existing) {
+        existing.open = true;
+        return existing;
+      }
+      var details = document.createElement("details");
+      details.className = "task-doc";
+      details.open = true;
+      details.setAttribute("data-task-doc", "");
+      details.setAttribute("data-path", meta.path);
+      details.setAttribute("data-title", meta.title);
+      details.setAttribute("data-slug", meta.slug);
+      details.setAttribute("data-updated", meta.updated || "");
+
+      var summary = document.createElement("summary");
+      var link = document.createElement("a");
+      link.className = "task-doc-link";
+      link.href = "/note/" + meta.slug + "/";
+      link.setAttribute("data-stop-toggle", "");
+      var title = document.createElement("span");
+      title.className = "item-title";
+      title.textContent = meta.title;
+      link.appendChild(title);
+
+      var countEl = document.createElement("span");
+      countEl.className = "status-count";
+      countEl.setAttribute("data-doc-count", "");
+      countEl.textContent = "0";
+
+      var pathRow = document.createElement("span");
+      pathRow.className = "path-row task-doc-path";
+      var pathText = document.createElement("span");
+      pathText.className = "path-text";
+      pathText.textContent = meta.path;
+      pathRow.appendChild(pathText);
+      var when = formatWhen(meta.updated);
+      if (when) {
+        var whenEl = document.createElement("span");
+        whenEl.setAttribute("data-doc-when", "");
+        whenEl.textContent = when;
+        pathRow.appendChild(whenEl);
+      }
+
+      summary.appendChild(link);
+      summary.appendChild(countEl);
+      summary.appendChild(pathRow);
+      details.appendChild(summary);
+
+      var body = document.createElement("div");
+      body.className = "task-doc-body";
+      details.appendChild(body);
+
+      var siblings = Array.prototype.slice.call(
+        tree.querySelectorAll(":scope > [data-task-doc]"),
+      );
+      var placed = false;
+      for (var i = 0; i < siblings.length; i++) {
+        var sibUpdated = siblings[i].getAttribute("data-updated") || "";
+        if ((meta.updated || "") > sibUpdated) {
+          tree.insertBefore(details, siblings[i]);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) tree.appendChild(details);
+      return details;
+    }
+
+    function findOrCreateSection(doc, section) {
+      var body = doc.querySelector(".task-doc-body");
+      if (!body) {
+        body = document.createElement("div");
+        body.className = "task-doc-body";
+        doc.appendChild(body);
+      }
+      var existing = findSection(body, section);
+      if (existing) return existing;
+
+      var wrap = document.createElement("div");
+      wrap.className = "task-section";
+      wrap.setAttribute("data-task-section", section || "");
+      if (section) {
+        var h = document.createElement("h3");
+        h.className = "task-section-heading";
+        h.textContent = section;
+        wrap.appendChild(h);
+      }
+      var ul = document.createElement("ul");
+      ul.className = "task-list";
+      wrap.appendChild(ul);
+      body.appendChild(wrap);
+      return wrap;
+    }
+
+    function relocateOnBoard(li, checked) {
+      var board = li.closest("[data-tasks-board]");
+      if (!board) return false;
+      var input = li.querySelector("[data-task-check]");
+      if (!(input instanceof HTMLInputElement)) return false;
+
+      var meta = {
+        path: input.getAttribute("data-path") || "",
+        title: input.getAttribute("data-title") || "",
+        slug: input.getAttribute("data-slug") || "",
+        section: input.getAttribute("data-section") || "",
+        updated: input.getAttribute("data-updated") || "",
+      };
+
+      var sourceDoc = li.closest("[data-task-doc]");
+      var sourceSection = li.closest("[data-task-section]");
+      var sourceBucket = li.closest("[data-task-bucket]");
+
+      var targetKind = checked ? "completed" : "open";
+      var targetBucket = board.querySelector(
+        '[data-task-bucket="' + targetKind + '"]',
+      );
+      if (!targetBucket) return false;
+
+      var tree = ensureTree(targetBucket);
+      var doc = findOrCreateDoc(tree, meta);
+      var section = findOrCreateSection(doc, meta.section);
+      var list = section.querySelector(".task-list");
+      if (list) list.appendChild(li);
+
+      if (sourceSection) {
+        var remaining = sourceSection.querySelectorAll("[data-task-li]");
+        if (remaining.length === 0) sourceSection.remove();
+      }
+      if (sourceDoc) refreshDocCount(sourceDoc);
+      if (sourceBucket) refreshBucketCount(sourceBucket);
+      refreshDocCount(doc);
+      refreshBucketCount(targetBucket);
+      return true;
+    }
+
+    function dismissFromProject(li, checked) {
+      var wrap = li.closest("[data-project-tasks]");
+      if (!wrap) return false;
+      if (!checked) return false;
+
+      var sourceDoc = li.closest("[data-task-doc]");
+      var sourceSection = li.closest("[data-task-section]");
+      li.remove();
+      if (sourceSection && sourceSection.querySelectorAll("[data-task-li]").length === 0) {
+        sourceSection.remove();
+      }
+      if (sourceDoc) refreshDocCount(sourceDoc);
+      refreshProjectTasks(wrap);
+      return true;
+    }
+
+    document.addEventListener(
+      "click",
+      function (event) {
+        var target = event.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest("[data-stop-toggle]")) event.stopPropagation();
+      },
+      true,
+    );
+
+    document.addEventListener("change", function (event) {
+      var target = event.target;
+      if (!(target instanceof HTMLInputElement)) return;
+      if (!target.matches("[data-task-check]")) return;
+
+      var block = target.getAttribute("data-block");
+      if (!block) return;
+      var checked = target.checked;
+      var li = target.closest("[data-task-li]");
+      target.disabled = true;
+      target.classList.add("task-pending");
+
+      fetch("/api/tasks/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocks: [block], checked: checked }),
+      })
+        .then(function (res) {
+          if (!res.ok) {
+            return res.json().then(
+              function (body) {
+                throw new Error((body && body.error) || res.statusText);
+              },
+              function () {
+                throw new Error(res.statusText);
+              },
+            );
+          }
+          if (!li) return;
+          if (relocateOnBoard(li, checked)) return;
+          dismissFromProject(li, checked);
+        })
+        .catch(function () {
+          target.checked = !checked;
+        })
+        .finally(function () {
+          target.disabled = false;
+          target.classList.remove("task-pending");
+        });
+    });
+  })();
+</script>

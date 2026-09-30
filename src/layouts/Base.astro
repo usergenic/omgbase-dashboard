@@ -1,0 +1,84 @@
+---
+import "../styles/global.css";
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** ISO timestamp of the newest vault edit reflected in this view. */
+  lastChange?: string;
+}
+
+const {
+  title = "Notes",
+  description = "Local dashboard over the omgbase notes repo",
+  lastChange,
+} = Astro.props;
+const pageTitle = title === "Notes" ? "Notes" : `${title} · Notes`;
+
+const lastChangeLabel = (() => {
+  if (!lastChange) return null;
+  const d = new Date(lastChange);
+  if (Number.isNaN(d.getTime())) return lastChange;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(d);
+})();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">Notes</a>
+      <p class="tagline">
+        omgbase · live queries
+        {lastChangeLabel ? (
+          <>
+            {" · "}
+            <time datetime={lastChange} title="Latest vault edit among loaded docs">
+              {lastChangeLabel}
+            </time>
+          </>
+        ) : null}
+      </p>
+    </header>
+    <slot />
+    <script is:inline>
+      document.addEventListener(
+        "click",
+        (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+          const btn = target.closest(".copy-path");
+          if (!(btn instanceof HTMLButtonElement)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const text = btn.getAttribute("data-copy");
+          if (!text) return;
+          const done = () => {
+            btn.classList.add("copied");
+            window.setTimeout(() => btn.classList.remove("copied"), 1200);
+          };
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(() => {});
+          }
+        },
+        true,
+      );
+    </script>
+  </body>
+</html>
