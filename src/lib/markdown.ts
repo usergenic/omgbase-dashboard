@@ -1,4 +1,5 @@
 import { micromark } from "micromark";
+import { rewriteVaultLinks } from "./notes";
 
 /**
  * `#RRGGBB` or `#RRGGBBAA` — not followed by another hex digit. Three-digit
@@ -86,5 +87,5 @@ export function decorateHexColors(html: string): string {
 export function renderInlineMarkdown(source: string): string {
   const html = micromark(source, { allowDangerousHtml: false });
   const inline = html.replace(/^<p>/i, "").replace(/<\/p>\s*$/i, "").trim();
-  return decorateHexColors(inline);
+  return decorateHexColors(rewriteVaultLinks(inline));
 }

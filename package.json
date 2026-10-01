@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
-    "@omgbase/astro": "^0.2.0",
+    "@omgbase/astro": "^0.3.1",
     "@omgbase/core": "^0.5.0",
     "@omgbase/sync": "^0.4.2",
     "@simplebrains/nomic-syntax": "^0.1.0",

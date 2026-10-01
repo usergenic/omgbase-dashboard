@@ -8,4 +8,4 @@ npm run dev
 
 ## Content
 
-Collections are defined in `src/content.config.ts` as OQX queries against the notes repo via `@omgbase/astro`. Do not mirror vault Markdown into `src/content`.
+The site is `output: "server"`; every page renders at request time. Collections are Astro **live** collections defined in `src/live.config.ts` as OQX queries against the omg repo via `@omgbase/astro`'s `omgLiveLoader` (the queries themselves live in `src/lib/queries.ts`). `/note/<slug>/` resolves any document in the repo. Do not mirror vault Markdown into `src/content` and do not reintroduce build-time collections.

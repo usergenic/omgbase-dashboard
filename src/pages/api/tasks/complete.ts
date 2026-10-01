@@ -1,8 +1,6 @@
 import type { APIRoute } from "astro";
 import { completeTasks } from "../../../lib/tasks";
 
-export const prerender = false;
-
 export const POST: APIRoute = async ({ request }) => {
   let body: unknown;
   try {

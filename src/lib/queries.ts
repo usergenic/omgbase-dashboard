@@ -28,13 +28,10 @@ export const queries = {
     query: `select $path, $title, $updated_at, outs: doc.out collect { select $path } from docs where $updated_at > "${ACTIVITY_CUTOFF}" && !$path.startsWith("scratch/") order by $updated_at desc`,
     limit: 300,
   },
-  /**
-   * Docs that own at least one GFM task — so detail pages exist for the
-   * Tasks panel links.
-   */
-  taskDocs: {
-    query: `select $path, $title, $updated_at from docs where !$path.startsWith("scratch/") && blocks exists { where type == "task" } order by $updated_at desc`,
-    limit: 200,
+  /** Every document; `/note/<slug>/` resolves any of them at request time. */
+  notes: {
+    query: `select $path, $title, $updated_at from docs`,
+    limit: 5000,
   },
   /**
    * Docs that own tasks — membership signals for assigning tasks to project
@@ -92,9 +89,6 @@ export function formatTasksPanelQuery(): string {
   return [
     "# task blocks (open + completed)",
     formatQuerySource("tasks"),
-    "",
-    "# docs with tasks (detail pages)",
-    formatQuerySource("taskDocs"),
   ].join("\n");
 }
 

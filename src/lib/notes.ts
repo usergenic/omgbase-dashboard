@@ -69,79 +69,53 @@ export function stripLeadingH1IfMatches(html: string, title: string): string {
   return html.slice(match[0].length);
 }
 
-/** Site hrefs / vault paths for notes we actually have detail pages for. */
-export function buildKnownNoteHrefs(
-  entries: Array<{ data: Pick<NoteData, "path" | "slug"> }>,
-): Set<string> {
-  return new Set(buildNoteHrefIndex(entries).keys());
-}
-
-/**
- * Map vault paths and `/note/…` aliases → canonical `/note/${slug}/` href.
- */
-export function buildNoteHrefIndex(
-  entries: Array<{ data: Pick<NoteData, "path" | "slug"> }>,
-): Map<string, string> {
-  const index = new Map<string, string>();
-  for (const entry of entries) {
-    const { path, slug } = entry.data;
-    const noteHref = `/note/${slug}/`;
-    const aliases = [
-      noteHref,
-      `/note/${slug}`,
-      path,
-      `/${path}`,
-    ];
-    if (path.endsWith(".md")) {
-      const bare = path.replace(/\.md$/i, "");
-      aliases.push(bare, `/${bare}`);
-    }
-    for (const key of aliases) index.set(key, noteHref);
-  }
-  return index;
-}
-
-function hrefPathOnly(href: string): string {
-  return href.split("#")[0]!.split("?")[0]!;
-}
-
-function hrefHash(href: string): string {
-  const i = href.indexOf("#");
-  return i >= 0 ? href.slice(i) : "";
-}
-
 function isExternalOrSpecialHref(href: string): boolean {
   if (!href || href.startsWith("#")) return true;
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return true;
   return false;
 }
 
-function resolveNoteHref(href: string, index: Map<string, string>): string | null {
-  const path = hrefPathOnly(href);
-  if (!path) return null;
-  return index.get(path) ?? index.get(path.replace(/\/$/, "")) ?? index.get(`${path.replace(/\/$/, "")}/`) ?? null;
+/** `/people/x.md#frag` or `people/x.md` → `/note/people/x/#frag`; else null. */
+export function vaultPathToNoteHref(href: string): string | null {
+  if (isExternalOrSpecialHref(href) || href.startsWith("/note/")) return null;
+  const hashAt = href.indexOf("#");
+  const path = (hashAt >= 0 ? href.slice(0, hashAt) : href).replace(/^\//, "");
+  if (!/\.md$/i.test(path)) return null;
+  return `/note/${path.replace(/\.md$/i, "")}/${hashAt >= 0 ? href.slice(hashAt) : ""}`;
 }
 
 /**
- * For body links: rewrite targets we serve to `/note/…/`; unwrap (keep inner
- * HTML only) when the target isn't a rendered dashboard note. External and
- * hash-only links are unchanged.
+ * Point vault-path links (`[x](/people/x.md)`) in small rendered fragments —
+ * task text, excerpts — at their `/note/…/` pages. Every document is routable,
+ * so a path is enough; the live loader does the identity-aware version for
+ * whole bodies.
  */
-export function prepareNoteBodyLinks(html: string, noteHrefIndex: Map<string, string>): string {
+export function rewriteVaultLinks(html: string): string {
+  return html.replace(/<a\b([^>]*)>/gi, (full, attrs: string) => {
+    const hrefMatch = attrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
+    if (!hrefMatch) return full;
+    const next = vaultPathToNoteHref(hrefMatch[2] ?? "");
+    if (!next) return full;
+    const quote = hrefMatch[1]!;
+    return `<a${attrs.replace(/\bhref\s*=\s*(["']).*?\1/i, `href=${quote}${next}${quote}`)}>`;
+  });
+}
+
+/**
+ * The live loader rewrites every link omg resolved to a document into
+ * `/note/<slug>/` before rendering. Whatever is left pointing at a vault path
+ * is dangling (no such doc), so unwrap it to its inner HTML rather than link
+ * to a 404. External, hash-only and site-absolute links are unchanged.
+ */
+export function unwrapUnresolvedNoteLinks(html: string): string {
   return html.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (full, attrs: string, inner: string) => {
     const hrefMatch = attrs.match(/\bhref\s*=\s*(["'])(.*?)\1/i);
     if (!hrefMatch) return full;
-    const quote = hrefMatch[1]!;
     const href = hrefMatch[2] ?? "";
     if (isExternalOrSpecialHref(href)) return full;
-
-    const resolved = resolveNoteHref(href, noteHrefIndex);
-    if (!resolved) return inner;
-
-    const next = `${resolved}${hrefHash(href)}`;
-    if (href === next) return full;
-    const newAttrs = attrs.replace(/\bhref\s*=\s*(["']).*?\1/i, `href=${quote}${next}${quote}`);
-    return `<a${newAttrs}>${inner}</a>`;
+    if (href.startsWith("/note/")) return full;
+    if (href.startsWith("/") && !/\.md(#|$)/i.test(href)) return full;
+    return inner;
   });
 }
 

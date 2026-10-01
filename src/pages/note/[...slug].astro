@@ -1,14 +1,13 @@
 ---
-import { getCollection, render } from "astro:content";
+import { getLiveEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import CopyPath from "../../components/CopyPath.astro";
 import {
-  buildNoteHrefIndex,
   formatWhen,
   noteTitle,
   noteUpdatedAt,
-  prepareNoteBodyLinks,
   stripLeadingH1IfMatches,
+  unwrapUnresolvedNoteLinks,
   type NoteData,
 } from "../../lib/notes";
 import { decorateHexColors } from "../../lib/markdown";
@@ -16,80 +15,72 @@ import { bindTaskCheckboxes } from "../../lib/note-tasks";
 import { fetchDocTasks } from "../../lib/tasks";
 import TaskWriteback from "../../components/TaskWriteback.astro";
 
-export async function getStaticPaths() {
-  const [recent, projects, tracking, activity, taskDocs] = await Promise.all([
-    getCollection("recent"),
-    getCollection("projects"),
-    getCollection("tracking"),
-    getCollection("activity"),
-    getCollection("taskDocs"),
-  ]);
+// Any document in the repo renders here, fetched from omg at request time.
+const slug = (Astro.params.slug ?? "").replace(/\/+$/, "");
+const result = await getLiveEntry("notes", { slug });
+// Astro reports a missing live entry through `error` (LiveEntryNotFoundError).
+const notFound =
+  !result.entry &&
+  (!result.error ||
+    result.error.name === "LiveEntryNotFoundError" ||
+    /was not found/i.test(result.error.message));
+const entry = result.entry;
+const error = notFound ? undefined : result.error;
 
-  const byId = new Map<string, (typeof recent)[number]>();
-  for (const entry of [
-    ...recent,
-    ...projects,
-    ...tracking,
-    ...activity,
-    ...taskDocs,
-  ]) {
-    byId.set(entry.id, entry);
-  }
+if (error) Astro.response.status = 502;
+else if (!entry) Astro.response.status = 404;
 
-  const entries = [...byId.values()];
-  const noteHrefIndex = Object.fromEntries(buildNoteHrefIndex(entries));
+const data = entry ? (entry.data as NoteData) : null;
+const title = data ? noteTitle(data) : error ? "omg unavailable" : "Note not found";
+const when = data ? formatWhen(noteUpdatedAt(data)) : "";
 
-  return entries.map((entry) => ({
-    params: { slug: entry.data.slug },
-    props: { entry, noteHrefIndex },
-  }));
-}
-
-const { entry, noteHrefIndex } = Astro.props;
-const data = entry.data as NoteData;
-const { Content } = await render(entry);
-const when = formatWhen(noteUpdatedAt(data));
-const title = noteTitle(data);
-const hrefIndex = new Map(Object.entries(noteHrefIndex as Record<string, string>));
-
-const renderedHtml = entry.rendered?.html;
-let bodyHtml =
-  typeof renderedHtml === "string"
-    ? decorateHexColors(
-        prepareNoteBodyLinks(stripLeadingH1IfMatches(renderedHtml, title), hrefIndex),
-      )
-    : null;
-
-// Make GFM checkboxes live: pair them with omg task blocks for write-back.
+let bodyHtml: string | null = null;
 let liveTasks = 0;
-if (bodyHtml !== null && bodyHtml.includes('class="task-list-item"')) {
-  const blocks = await fetchDocTasks(data.path);
-  const bound = bindTaskCheckboxes(bodyHtml, blocks, {
-    path: data.path,
-    title,
-    slug: data.slug,
-    updatedAt: noteUpdatedAt(data),
-  });
-  bodyHtml = bound.html;
-  liveTasks = bound.bound;
+if (entry && data) {
+  const renderedHtml = entry.rendered?.html;
+  if (typeof renderedHtml === "string") {
+    bodyHtml = decorateHexColors(
+      unwrapUnresolvedNoteLinks(stripLeadingH1IfMatches(renderedHtml, title)),
+    );
+    // Make GFM checkboxes live: pair them with omg task blocks for write-back.
+    if (bodyHtml.includes('class="task-list-item"')) {
+      const blocks = await fetchDocTasks(data.path);
+      const bound = bindTaskCheckboxes(bodyHtml, blocks, {
+        path: data.path,
+        title,
+        slug: data.slug,
+        updatedAt: noteUpdatedAt(data),
+      });
+      bodyHtml = bound.html;
+      liveTasks = bound.bound;
+    }
+  }
 }
 ---
-<Base title={title} description={data.path}>
+<Base title={title} description={data?.path ?? slug}>
   <main class="note-page">
     <a class="back" href="/">← Dashboard</a>
     <h1>{title}</h1>
-    <p class="note-meta">
-      <span class="path-row">
-        <span class="path-text">{data.path}</span>
-        <CopyPath path={data.path} />
-      </span>
-      {data.status ? <span>· {data.status}</span> : null}
-      {data.layer ? <span>· {data.layer}</span> : null}
-      {when ? <span>· {when}</span> : null}
-    </p>
-    <article class="prose">
-      {bodyHtml !== null ? <div set:html={bodyHtml} /> : <Content />}
-    </article>
+    {data ? (
+      <p class="note-meta">
+        <span class="path-row">
+          <span class="path-text">{data.path}</span>
+          <CopyPath path={data.path} />
+        </span>
+        {data.status ? <span>· {data.status}</span> : null}
+        {data.layer ? <span>· {data.layer}</span> : null}
+        {when ? <span>· {when}</span> : null}
+      </p>
+    ) : null}
+    {error ? (
+      <p class="empty">Could not reach omg: {error.message}</p>
+    ) : !entry ? (
+      <p class="empty">No document at <code>{slug}.md</code> in this repo.</p>
+    ) : (
+      <article class="prose">
+        {bodyHtml !== null ? <div set:html={bodyHtml} /> : <p class="empty">Nothing to render.</p>}
+      </article>
+    )}
   </main>
   {liveTasks > 0 ? <TaskWriteback /> : null}
 </Base>

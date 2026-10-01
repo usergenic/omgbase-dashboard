@@ -3,8 +3,8 @@ import node from "@astrojs/node";
 import { nomicShikiLanguage } from "@simplebrains/nomic-syntax";
 
 export default defineConfig({
-  // Static by default; API routes set `prerender = false` for on-demand.
-  output: "static",
+  // Everything renders at request time from omg live collections.
+  output: "server",
   adapter: node({ mode: "standalone" }),
   markdown: {
     shikiConfig: {
