@@ -27,8 +27,8 @@ const { tracking, error } = Astro.props;
               <span class="path-text">{displayPath(data.path)}</span>
               <CopyPath path={data.path} />
             </span>
-            <StatusBadge status={data.status} />
             {when ? <span>{when}</span> : null}
+            <StatusBadge status={data.status} />
           </span>
         </li>
       );
