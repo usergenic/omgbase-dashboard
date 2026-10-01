@@ -1066,3 +1066,40 @@ html.diff-wrap .diff-body {
   align-items: center;
   gap: 0.5rem;
 }
+
+/* ---- Status filter chips (components/StatusFilter.astro) ---- */
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 0.6rem;
+}
+
+.chip {
+  cursor: pointer;
+  border: 1px solid transparent;
+  line-height: 1.3;
+  opacity: 0.75;
+  transition: opacity 0.12s ease, box-shadow 0.12s ease;
+}
+
+.chip:hover {
+  opacity: 1;
+}
+
+.chip[aria-pressed="true"] {
+  opacity: 1;
+  border-color: currentColor;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.chip-count {
+  margin-left: 0.35rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.list > li[hidden] {
+  display: none;
+}

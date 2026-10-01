@@ -4,6 +4,7 @@ import QueryHint from "../components/QueryHint.astro";
 import DiffWrapToggle from "../components/DiffWrapToggle.astro";
 import TaskWriteback from "../components/TaskWriteback.astro";
 import LiveFeeds from "../components/LiveFeeds.astro";
+import StatusFilter from "../components/StatusFilter.astro";
 import RecentFeed from "../components/feeds/RecentFeed.astro";
 import ProjectsFeed from "../components/feeds/ProjectsFeed.astro";
 import TrackingFeed from "../components/feeds/TrackingFeed.astro";
@@ -79,4 +80,5 @@ if (home.error) Astro.response.status = 502;
   </main>
   <TaskWriteback />
   <LiveFeeds intervalMs={3000} />
+  <StatusFilter />
 </Base>

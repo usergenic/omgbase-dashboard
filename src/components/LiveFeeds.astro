@@ -83,6 +83,7 @@ const { intervalMs = 3000 } = Astro.props;
         var state = detailsState(r.panel);
         restoreDetails(tpl.content, state);
         r.panel.replaceChildren(tpl.content);
+        r.panel.dispatchEvent(new CustomEvent("live-feeds:swapped", { bubbles: true }));
       });
       updateHeader();
     }

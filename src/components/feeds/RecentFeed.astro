@@ -9,19 +9,46 @@ import type { RecentFeedData } from "../../lib/home";
 type Props = RecentFeedData;
 const { recent, diffs, lastChange, error } = Astro.props;
 const lastChangeLabel = formatWhen(lastChange);
+
+// Status chips: one per distinct status among the loaded items, most common first.
+const statusCounts = new Map<string, number>();
+for (const entry of recent) {
+  const status = typeof entry.data.status === "string" ? entry.data.status.trim() : "";
+  if (status) statusCounts.set(status, (statusCounts.get(status) ?? 0) + 1);
+}
+const statuses = [...statusCounts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 ---
 {error ? (
   <p class="empty">Could not load recent docs: {error.message}</p>
 ) : recent.length === 0 ? (
   <p class="empty">No recent docs loaded.</p>
 ) : (
+  <>
+    {statuses.length > 0 ? (
+      <div class="chip-row" data-status-chips role="group" aria-label="Filter by status">
+        {statuses.map(([status, count]) => (
+          <button
+            type="button"
+            class={`chip badge ${status}`}
+            data-status-chip={status}
+            aria-pressed="false"
+            title={`Show only ${status}`}
+          >
+            {status}
+            <span class="chip-count">{count}</span>
+          </button>
+        ))}
+      </div>
+    ) : null}
+    <p class="empty" data-filter-empty hidden>No recent docs match that status.</p>
   <ul class="list" data-last-change={lastChange ?? ""} data-last-change-label={lastChangeLabel}>
     {recent.map((entry) => {
       const data = entry.data;
       const when = formatWhen(noteUpdatedAt(data));
       const diff = diffs.get(entry.id);
+      const status = typeof data.status === "string" ? data.status.trim() : "";
       return (
-        <li class="recent-item" style={vtStyle("recent", entry.id)}>
+        <li class="recent-item" style={vtStyle("recent", entry.id)} data-status={status}>
           <a class="item-link" href={`/note/${data.slug}/`}>
             <span class="item-title">{noteTitle(data)}</span>
           </a>
@@ -46,4 +73,5 @@ const lastChangeLabel = formatWhen(lastChange);
       );
     })}
   </ul>
+  </>
 )}

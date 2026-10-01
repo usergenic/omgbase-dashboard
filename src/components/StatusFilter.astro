@@ -1,0 +1,76 @@
+---
+/**
+ * Exclusive status filter chips for a feed (`[data-status-chips]` inside a
+ * `[data-live-panel]`). One chip active at a time; clicking it again clears.
+ * The choice is kept per panel in sessionStorage and re-applied after the
+ * live-feed swap replaces the panel's HTML.
+ */
+---
+<script is:inline>
+  (function () {
+    var KEY_PREFIX = "notes-dashboard:status-filter:";
+
+    function panelOf(el) {
+      return el.closest("[data-live-panel]");
+    }
+
+    function readFilter(panel) {
+      try {
+        return sessionStorage.getItem(KEY_PREFIX + panel.getAttribute("data-live-panel")) || "";
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function writeFilter(panel, value) {
+      try {
+        var key = KEY_PREFIX + panel.getAttribute("data-live-panel");
+        if (value) sessionStorage.setItem(key, value);
+        else sessionStorage.removeItem(key);
+      } catch (_) {}
+    }
+
+    function apply(panel) {
+      var chips = panel.querySelector("[data-status-chips]");
+      if (!chips) return;
+      var active = readFilter(panel);
+      // A status that no longer appears in the list can't stay selected.
+      if (active && !chips.querySelector('[data-status-chip="' + active + '"]')) {
+        active = "";
+        writeFilter(panel, "");
+      }
+      chips.querySelectorAll("[data-status-chip]").forEach(function (chip) {
+        chip.setAttribute("aria-pressed", chip.getAttribute("data-status-chip") === active ? "true" : "false");
+      });
+      var visible = 0;
+      // Astro omits data-status when it is empty, so match on list items, not the attribute.
+      panel.querySelectorAll("ul.list > li").forEach(function (li) {
+        var show = !active || (li.getAttribute("data-status") || "") === active;
+        li.hidden = !show;
+        if (show) visible += 1;
+      });
+      var empty = panel.querySelector("[data-filter-empty]");
+      if (empty) empty.hidden = !(active && visible === 0);
+    }
+
+    document.addEventListener("click", function (event) {
+      var target = event.target;
+      if (!(target instanceof Element)) return;
+      var chip = target.closest("[data-status-chip]");
+      if (!chip) return;
+      var panel = panelOf(chip);
+      if (!panel) return;
+      event.preventDefault();
+      var status = chip.getAttribute("data-status-chip") || "";
+      writeFilter(panel, readFilter(panel) === status ? "" : status);
+      apply(panel);
+    });
+
+    document.addEventListener("live-feeds:swapped", function (event) {
+      var panel = event.target instanceof Element ? panelOf(event.target) || event.target : null;
+      if (panel) apply(panel);
+    });
+
+    document.querySelectorAll("[data-live-panel]").forEach(apply);
+  })();
+</script>
