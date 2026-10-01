@@ -1,0 +1,35 @@
+---
+/**
+ * HTML fragments for the home panels, fetched by the live-feed script when the
+ * repo's commit seq moves. Same live collections as the page; no layout.
+ */
+import RecentFeed from "../../components/feeds/RecentFeed.astro";
+import ProjectsFeed from "../../components/feeds/ProjectsFeed.astro";
+import TrackingFeed from "../../components/feeds/TrackingFeed.astro";
+import TasksFeed from "../../components/feeds/TasksFeed.astro";
+import { loadProjects, loadRecent, loadTasks, loadTracking } from "../../lib/home";
+
+export const partial = true;
+
+const panel = Astro.params.panel ?? "";
+Astro.response.headers.set("Cache-Control", "no-store");
+
+const known = new Set(["recent", "projects", "tracking", "tasks"]);
+if (!known.has(panel)) {
+  Astro.response.status = 404;
+}
+const data =
+  panel === "recent"
+    ? { recent: await loadRecent() }
+    : panel === "projects"
+      ? { projects: await loadProjects() }
+      : panel === "tracking"
+        ? { tracking: await loadTracking() }
+        : panel === "tasks"
+          ? { tasks: await loadTasks() }
+          : {};
+---
+{data.recent ? <RecentFeed {...data.recent} /> : null}
+{data.projects ? <ProjectsFeed {...data.projects} /> : null}
+{data.tracking ? <TrackingFeed {...data.tracking} /> : null}
+{data.tasks ? <TasksFeed {...data.tasks} /> : null}

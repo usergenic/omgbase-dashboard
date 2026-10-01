@@ -23,6 +23,7 @@ export type NoteData = {
 
 export type ActivityItem = {
   path: string;
+  docId?: string;
   slug: string;
   title: string;
   updatedAt?: string;
@@ -177,6 +178,7 @@ function outPathsOf(data: NoteData): string[] {
 export function toActivityItem(data: NoteData): ActivityItem {
   return {
     path: data.path,
+    docId: data.docId,
     slug: data.slug,
     title: noteTitle(data),
     updatedAt: noteUpdatedAt(data),

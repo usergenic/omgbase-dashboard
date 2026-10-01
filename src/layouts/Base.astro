@@ -51,7 +51,7 @@ const lastChangeLabel = (() => {
         {lastChangeLabel ? (
           <>
             {" · "}
-            <time datetime={lastChange} title="Latest vault edit among loaded docs">
+            <time datetime={lastChange} data-last-change-target title="Latest vault edit among loaded docs">
               {lastChangeLabel}
             </time>
           </>

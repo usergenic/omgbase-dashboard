@@ -1,0 +1,79 @@
+---
+import CopyPath from "../CopyPath.astro";
+import ProjectTasks from "../ProjectTasks.astro";
+import { activityForProject, formatWhen, noteTitle } from "../../lib/notes";
+import { tasksForProject } from "../../lib/tasks";
+import { vtStyle } from "../../lib/vt";
+import type { ProjectsFeedData } from "../../lib/home";
+
+type Props = ProjectsFeedData;
+const { byStatus, activityDocs, openTaskGroups, error } = Astro.props;
+---
+{error ? (
+  <p class="empty">Could not load projects: {error.message}</p>
+) : byStatus.size === 0 ? (
+  <p class="empty">No projects loaded.</p>
+) : (
+  [...byStatus.entries()].map(([status, items]) => (
+    <details
+      class="status-group"
+      data-key={`status:${status}`}
+      open={status === "active" ? true : undefined}
+    >
+      <summary>
+        <span class={`badge ${status}`}>{status}</span>
+        <span class="status-count">{items.length}</span>
+      </summary>
+      <ul class="list project-list">
+        {items.map((entry) => {
+          const data = entry.data;
+          const activity = activityForProject(data.path, activityDocs);
+          const projectTasks = tasksForProject(data.path, openTaskGroups);
+          const priority = typeof data.priority === "number" ? data.priority : null;
+          return (
+            <li class="project-card" style={vtStyle("project", entry.id)}>
+              <a class="project-link item-link" href={`/note/${data.slug}/`}>
+                <span class="item-title">
+                  {noteTitle(data)}
+                  {priority !== null ? (
+                    <span class="priority-mark" title={`priority ${priority}`}>
+                      #{priority}
+                    </span>
+                  ) : null}
+                </span>
+              </a>
+              <span class="item-meta">
+                <span class="path-row">
+                  <span class="path-text">{data.path}</span>
+                  <CopyPath path={data.path} />
+                </span>
+              </span>
+              <ProjectTasks hub={data.path} groups={projectTasks} />
+              {activity.length > 0 ? (
+                <ul class="activity-list">
+                  {activity.map((item) => {
+                    const when = formatWhen(item.updatedAt);
+                    return (
+                      <li style={vtStyle(`act-${entry.id}`, item.docId ?? item.path)}>
+                        <a class="item-link" href={`/note/${item.slug}/`}>
+                          <span class="activity-title">{item.title}</span>
+                        </a>
+                        <span class="item-meta">
+                          <span class="path-row">
+                            <span class="path-text">{item.path}</span>
+                            <CopyPath path={item.path} />
+                          </span>
+                          {when ? <span>{when}</span> : null}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </details>
+  ))
+)}

@@ -1,0 +1,9 @@
+---
+import TaskTree from "../TaskTree.astro";
+import type { TasksFeedData } from "../../lib/home";
+
+type Props = TasksFeedData;
+const { tasks, error } = Astro.props;
+---
+{error ? <p class="empty">Could not load tasks: {error.message}</p> : null}
+<TaskTree open={tasks.open} completed={tasks.completed} truncated={tasks.truncated} />

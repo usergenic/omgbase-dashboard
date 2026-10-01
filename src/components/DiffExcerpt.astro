@@ -4,9 +4,11 @@ interface Props {
   truncated?: boolean;
   from?: string;
   to?: string;
+  /** Stable identity so the live-feed swap can keep the open/closed state. */
+  key?: string;
 }
 
-const { text, truncated = false, from, to } = Astro.props;
+const { text, truncated = false, from, to, key } = Astro.props;
 const lines = text.split("\n").map((line) => {
   let kind = "ctx";
   if (line.startsWith("+")) kind = "add";
@@ -17,7 +19,7 @@ const lines = text.split("\n").map((line) => {
 const revLabel =
   from && to ? `${from.slice(0, 10)} → ${to.slice(0, 10)}` : null;
 ---
-<details class="diff-excerpt">
+<details class="diff-excerpt" data-key={key}>
   <summary>diff{revLabel ? ` · ${revLabel}` : ""}</summary>
   <pre class="diff-body" aria-label="Unified diff excerpt">
     {lines.map(({ line, kind }) => (

@@ -1,88 +1,30 @@
 ---
-import { getLiveCollection } from "astro:content";
 import Base from "../layouts/Base.astro";
 import QueryHint from "../components/QueryHint.astro";
-import CopyPath from "../components/CopyPath.astro";
-import {
-  activityForProject,
-  formatWhen,
-  noteTitle,
-  noteUpdatedAt,
-  projectPriorityRank,
-  projectStatusRank,
-  type NoteData,
-} from "../lib/notes";
-import { formatProjectsPanelQuery, formatTasksPanelQuery } from "../lib/queries";
-import { fetchDiffExcerpts } from "../lib/diffs";
-import { fetchTasks, tasksForProject } from "../lib/tasks";
-import DiffExcerpt from "../components/DiffExcerpt.astro";
 import DiffWrapToggle from "../components/DiffWrapToggle.astro";
-import TaskTree from "../components/TaskTree.astro";
-import ProjectTasks from "../components/ProjectTasks.astro";
 import TaskWriteback from "../components/TaskWriteback.astro";
+import LiveFeeds from "../components/LiveFeeds.astro";
+import RecentFeed from "../components/feeds/RecentFeed.astro";
+import ProjectsFeed from "../components/feeds/ProjectsFeed.astro";
+import TrackingFeed from "../components/feeds/TrackingFeed.astro";
+import TasksFeed from "../components/feeds/TasksFeed.astro";
+import { formatProjectsPanelQuery, formatTasksPanelQuery } from "../lib/queries";
+import { loadHome } from "../lib/home";
 
-type LiveNote = { id: string; data: NoteData };
-
-// Every panel is a request-time OQX slice; nothing is baked at build.
-const [recentRes, projectsRes, trackingRes, activityRes] = await Promise.all([
-  getLiveCollection("recent"),
-  getLiveCollection("projects"),
-  getLiveCollection("tracking"),
-  getLiveCollection("activity"),
-]);
-const loadError =
-  recentRes.error ?? projectsRes.error ?? trackingRes.error ?? activityRes.error ?? null;
-if (loadError) Astro.response.status = 502;
-
-const entriesOf = (res: { entries?: Array<{ id: string; data: Record<string, unknown> }> }): LiveNote[] =>
-  (res.entries ?? []).map((e) => ({ id: e.id, data: e.data as NoteData }));
-
-const byUpdatedDesc = (a: LiveNote, b: LiveNote) =>
-  String(noteUpdatedAt(b.data) ?? "").localeCompare(String(noteUpdatedAt(a.data) ?? ""));
-
-const recent = entriesOf(recentRes).sort(byUpdatedDesc);
-
-const [recentDiffs, tasks] = loadError
-  ? [new Map(), { open: { groups: [], total: 0 }, completed: { groups: [], total: 0 }, truncated: false }]
-  : await Promise.all([fetchDiffExcerpts(recent.map((e) => e.id)), fetchTasks()]);
-
-const projects = entriesOf(projectsRes).sort((a, b) => {
-  const ra = projectStatusRank(a.data.status);
-  const rb = projectStatusRank(b.data.status);
-  if (ra !== rb) return ra - rb;
-  const pa = projectPriorityRank(a.data.priority);
-  const pb = projectPriorityRank(b.data.priority);
-  if (pa !== pb) return pa - pb;
-  return noteTitle(a.data).localeCompare(noteTitle(b.data));
-});
-
-const tracking = entriesOf(trackingRes).sort(byUpdatedDesc);
-
-const activityDocs = entriesOf(activityRes).map((e) => e.data);
-
-const lastChange = recent.reduce<string | undefined>((best, entry) => {
-  const at = noteUpdatedAt(entry.data);
-  if (!at) return best;
-  if (!best || at > best) return at;
-  return best;
-}, undefined);
-
-const byStatus = new Map<string, typeof projects>();
-for (const project of projects) {
-  const key = project.data.status ?? "unspecified";
-  const bucket = byStatus.get(key) ?? [];
-  bucket.push(project);
-  byStatus.set(key, bucket);
-}
+// Every panel is a request-time OQX slice; nothing is baked at build. After
+// first paint, <LiveFeeds /> keeps the panels current in place.
+const home = await loadHome();
+if (home.error) Astro.response.status = 502;
 ---
 <Base
   description="Recent edits, project status, and tracking notes from omgbase"
-  lastChange={lastChange}
+  lastChange={home.recent.lastChange}
 >
   <main class="shell">
-    {loadError ? (
-      <p class="empty load-error">Could not reach omg: {loadError.message}</p>
+    {home.error ? (
+      <p class="empty load-error">Could not reach omg: {home.error.message}</p>
     ) : null}
+
     {/*
       Hero disabled to reclaim vertical space. Revisit once the vault has a
       notion of "current attention" worth surfacing here instead of a generic
@@ -103,137 +45,26 @@ for (const project of projects) {
           <QueryHint collection="recent" />
         </div>
         <h2>Recently edited</h2>
-        {recent.length === 0 ? (
-          <p class="empty">No recent docs loaded.</p>
-        ) : (
-          <ul class="list">
-            {recent.map((entry) => {
-              const data = entry.data as NoteData;
-              const when = formatWhen(noteUpdatedAt(data));
-              const diff = recentDiffs.get(entry.id);
-              return (
-                <li class="recent-item">
-                  <a class="item-link" href={`/note/${data.slug}/`}>
-                    <span class="item-title">{noteTitle(data)}</span>
-                  </a>
-                  <span class="item-meta">
-                    <span class="path-row">
-                      <span class="path-text">{data.path}</span>
-                      <CopyPath path={data.path} />
-                    </span>
-                    {when ? <span>{when}</span> : null}
-                  </span>
-                  {diff ? (
-                    <DiffExcerpt
-                      text={diff.excerpt}
-                      truncated={diff.truncated}
-                      from={diff.from}
-                      to={diff.to}
-                    />
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <div data-live-panel="recent">
+          <RecentFeed {...home.recent} />
+        </div>
       </section>
 
       <div>
         <section class="panel">
           <QueryHint source={formatProjectsPanelQuery()} />
           <h2>Projects</h2>
-          {projects.length === 0 ? (
-            <p class="empty">No projects loaded.</p>
-          ) : (
-            [...byStatus.entries()].map(([status, items]) => (
-              <details class="status-group" open={status === "active" ? true : undefined}>
-                <summary>
-                  <span class={`badge ${status}`}>{status}</span>
-                  <span class="status-count">{items.length}</span>
-                </summary>
-                <ul class="list project-list">
-                  {items.map((entry) => {
-                    const data = entry.data as NoteData;
-                    const activity = activityForProject(data.path, activityDocs);
-                    const projectTasks = tasksForProject(data.path, tasks.open.groups);
-                    const priority =
-                      typeof data.priority === "number" ? data.priority : null;
-                    return (
-                      <li class="project-card">
-                        <a class="project-link item-link" href={`/note/${data.slug}/`}>
-                          <span class="item-title">
-                            {noteTitle(data)}
-                            {priority !== null ? (
-                              <span class="priority-mark" title={`priority ${priority}`}>
-                                #{priority}
-                              </span>
-                            ) : null}
-                          </span>
-                        </a>
-                        <span class="item-meta">
-                          <span class="path-row">
-                            <span class="path-text">{data.path}</span>
-                            <CopyPath path={data.path} />
-                          </span>
-                        </span>
-                        <ProjectTasks groups={projectTasks} />
-                        {activity.length > 0 ? (
-                          <ul class="activity-list">
-                            {activity.map((item) => {
-                              const when = formatWhen(item.updatedAt);
-                              return (
-                                <li>
-                                  <a class="item-link" href={`/note/${item.slug}/`}>
-                                    <span class="activity-title">{item.title}</span>
-                                  </a>
-                                  <span class="item-meta">
-                                    <span class="path-row">
-                                      <span class="path-text">{item.path}</span>
-                                      <CopyPath path={item.path} />
-                                    </span>
-                                    {when ? <span>{when}</span> : null}
-                                  </span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </details>
-            ))
-          )}
+          <div data-live-panel="projects">
+            <ProjectsFeed {...home.projects} />
+          </div>
         </section>
 
         <section class="panel" style="margin-top:2rem;">
           <QueryHint collection="tracking" />
           <h2>Tracking</h2>
-          {tracking.length === 0 ? (
-            <p class="empty">No tracking notes.</p>
-          ) : (
-            <ul class="list">
-              {tracking.map((entry) => {
-                const data = entry.data as NoteData;
-                const when = formatWhen(noteUpdatedAt(data));
-                return (
-                  <li>
-                    <a class="item-link" href={`/note/${data.slug}/`}>
-                      <span class="item-title">{noteTitle(data)}</span>
-                    </a>
-                    <span class="item-meta">
-                      <span class="path-row">
-                        <span class="path-text">{data.path}</span>
-                        <CopyPath path={data.path} />
-                      </span>
-                      {when ? <span>{when}</span> : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <div data-live-panel="tracking">
+            <TrackingFeed {...home.tracking} />
+          </div>
         </section>
       </div>
     </div>
@@ -241,12 +72,11 @@ for (const project of projects) {
     <section class="panel tasks-panel">
       <QueryHint source={formatTasksPanelQuery()} />
       <h2>Tasks</h2>
-      <TaskTree
-        open={tasks.open}
-        completed={tasks.completed}
-        truncated={tasks.truncated}
-      />
+      <div data-live-panel="tasks">
+        <TasksFeed {...home.tasks} />
+      </div>
     </section>
   </main>
   <TaskWriteback />
+  <LiveFeeds intervalMs={3000} />
 </Base>

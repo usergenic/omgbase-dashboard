@@ -1,0 +1,146 @@
+---
+/**
+ * Keep the home panels current without a page reload.
+ *
+ * Polls `/api/head` (the repo's commit seq). When it moves, fetches each
+ * `[data-live-panel]`'s partial and swaps it in inside a same-document View
+ * Transition, so items that moved glide to their new place, new items slide in
+ * and removed ones fade out (see the `::view-transition-*` rules in
+ * global.css). `<details data-key>` open/closed state survives the swap. Falls
+ * back to a plain swap without the API or under prefers-reduced-motion.
+ */
+interface Props {
+  intervalMs?: number;
+}
+const { intervalMs = 3000 } = Astro.props;
+---
+<script is:inline data-live-feeds data-interval={intervalMs}>
+  (function () {
+    var cfg = document.currentScript;
+    var INTERVAL = Number((cfg && cfg.getAttribute("data-interval")) || 3000);
+    var MAX_BACKOFF = 30000;
+    var panels = Array.prototype.slice.call(document.querySelectorAll("[data-live-panel]"));
+    if (panels.length === 0) return;
+
+    var head = null;
+    var timer = null;
+    var failures = 0;
+    var refreshing = false;
+
+    function schedule(ms) {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(tick, ms);
+    }
+
+    // Don't yank the DOM out from under an in-flight checkbox write-back.
+    function busy() {
+      return document.querySelector(".task-pending") !== null;
+    }
+
+    function detailsState(root) {
+      var state = new Map();
+      root.querySelectorAll("details[data-key]").forEach(function (d) {
+        state.set(d.getAttribute("data-key"), d.open);
+      });
+      return state;
+    }
+
+    function restoreDetails(root, state) {
+      root.querySelectorAll("details[data-key]").forEach(function (d) {
+        var key = d.getAttribute("data-key");
+        if (state.has(key)) d.open = state.get(key);
+      });
+    }
+
+    function updateHeader() {
+      var source = document.querySelector("[data-live-panel='recent'] [data-last-change]");
+      var target = document.querySelector("[data-last-change-target]");
+      if (!source || !target) return;
+      var iso = source.getAttribute("data-last-change") || "";
+      var label = source.getAttribute("data-last-change-label") || "";
+      if (!iso || !label) return;
+      if (target.getAttribute("datetime") === iso) return;
+      target.setAttribute("datetime", iso);
+      target.textContent = label;
+    }
+
+    function fetchPanel(panel) {
+      var name = panel.getAttribute("data-live-panel");
+      return fetch("/partials/" + name, { cache: "no-store", headers: { Accept: "text/html" } }).then(
+        function (res) {
+          if (!res.ok) throw new Error("partial " + name + " → " + res.status);
+          return res.text().then(function (html) {
+            return { panel: panel, html: html };
+          });
+        },
+      );
+    }
+
+    function apply(results) {
+      results.forEach(function (r) {
+        var tpl = document.createElement("template");
+        tpl.innerHTML = r.html.trim();
+        var state = detailsState(r.panel);
+        restoreDetails(tpl.content, state);
+        r.panel.replaceChildren(tpl.content);
+      });
+      updateHeader();
+    }
+
+    function animatedApply(results) {
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (typeof document.startViewTransition !== "function" || reduce) {
+        apply(results);
+        return Promise.resolve();
+      }
+      var transition = document.startViewTransition(function () {
+        apply(results);
+      });
+      return transition.finished.catch(function () {});
+    }
+
+    function refresh() {
+      refreshing = true;
+      return Promise.all(panels.map(fetchPanel))
+        .then(animatedApply)
+        .finally(function () {
+          refreshing = false;
+        });
+    }
+
+    function readHead() {
+      return fetch("/api/head", { cache: "no-store" }).then(function (res) {
+        if (!res.ok) throw new Error("head → " + res.status);
+        return res.json().then(function (body) {
+          return body.head;
+        });
+      });
+    }
+
+    function tick() {
+      if (document.hidden || busy() || refreshing) {
+        schedule(INTERVAL);
+        return;
+      }
+      readHead()
+        .then(function (h) {
+          var moved = head !== null && h !== head;
+          head = h;
+          failures = 0;
+          return moved ? refresh() : undefined;
+        })
+        .then(function () {
+          schedule(INTERVAL);
+        })
+        .catch(function () {
+          failures += 1;
+          schedule(Math.min(MAX_BACKOFF, INTERVAL * Math.pow(2, failures)));
+        });
+    }
+
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) schedule(250);
+    });
+    schedule(INTERVAL);
+  })();
+</script>

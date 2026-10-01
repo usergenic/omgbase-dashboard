@@ -3,6 +3,7 @@ import CopyPath from "./CopyPath.astro";
 import TaskCheckbox from "./TaskCheckbox.astro";
 import { formatWhen } from "../lib/notes";
 import { sectionRuns, type TaskBucket } from "../lib/tasks";
+import { vtStyle } from "../lib/vt";
 
 interface Props {
   open: TaskBucket;
@@ -13,7 +14,7 @@ interface Props {
 const { open, completed, truncated = false } = Astro.props;
 ---
 <div class="tasks-board" data-tasks-board>
-  <details class="task-bucket" open data-task-bucket="open">
+  <details class="task-bucket" open data-task-bucket="open" data-key="bucket:open">
     <summary class="task-bucket-summary">
       <span class="badge">Open</span>
       <span class="status-count" data-bucket-count>
@@ -30,6 +31,8 @@ const { open, completed, truncated = false } = Astro.props;
           <details
             class="task-doc"
             data-task-doc
+            data-key={`open:doc:${group.path}`}
+            style={vtStyle("taskdoc-open", group.path)}
             data-path={group.path}
             data-title={group.title}
             data-slug={group.slug}
@@ -76,7 +79,7 @@ const { open, completed, truncated = false } = Astro.props;
     )}
   </details>
 
-  <details class="task-bucket" data-task-bucket="completed">
+  <details class="task-bucket" data-task-bucket="completed" data-key="bucket:completed">
     <summary class="task-bucket-summary">
       <span class="badge completed">Completed</span>
       <span class="status-count" data-bucket-count>
@@ -93,6 +96,8 @@ const { open, completed, truncated = false } = Astro.props;
           <details
             class="task-doc"
             data-task-doc
+            data-key={`completed:doc:${group.path}`}
+            style={vtStyle("taskdoc-done", group.path)}
             data-path={group.path}
             data-title={group.title}
             data-slug={group.slug}

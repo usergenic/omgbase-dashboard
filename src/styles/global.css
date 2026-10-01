@@ -906,3 +906,47 @@ html.diff-wrap .diff-body {
   vertical-align: -0.05em;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 35%, transparent);
 }
+
+/* ---- Live feeds: in-place panel updates (see components/LiveFeeds.astro) ---- */
+
+/* Only feed items animate; the page itself must not cross-fade. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(*.feed-item) {
+  animation-duration: 340ms;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* An item with no counterpart on the other side is new (slide in) or gone (fade). */
+::view-transition-new(*.feed-item):only-child {
+  animation: feed-in 340ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+::view-transition-old(*.feed-item):only-child {
+  animation: feed-out 180ms ease-in both;
+}
+
+@keyframes feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes feed-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

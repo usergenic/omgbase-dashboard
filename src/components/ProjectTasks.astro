@@ -5,15 +5,17 @@ import { formatWhen } from "../lib/notes";
 import { sectionRuns, type TaskDocGroup } from "../lib/tasks";
 
 interface Props {
+  /** Owning project hub path — namespaces the `data-key`s of this card's details. */
+  hub: string;
   groups: TaskDocGroup[];
 }
 
-const { groups } = Astro.props;
+const { hub, groups } = Astro.props;
 const total = groups.reduce((n, g) => n + g.tasks.length, 0);
 ---
 {
   total === 0 ? null : (
-    <details class="project-tasks" data-project-tasks>
+    <details class="project-tasks" data-project-tasks data-key={`ptasks:${hub}`}>
       <summary>
         <span class="project-tasks-label">
           {total} open task{total === 1 ? "" : "s"}
@@ -25,6 +27,7 @@ const total = groups.reduce((n, g) => n + g.tasks.length, 0);
           <details
             class="task-doc project-task-doc"
             data-task-doc
+            data-key={`ptasks:${hub}:doc:${group.path}`}
             data-path={group.path}
             data-title={group.title}
             data-slug={group.slug}
