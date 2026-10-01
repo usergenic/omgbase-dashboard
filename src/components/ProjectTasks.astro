@@ -42,7 +42,10 @@ const total = groups.reduce((n, g) => n + g.tasks.length, 0);
               >
                 <span class="item-title">{group.title}</span>
               </a>
-              <span class="status-count" data-doc-count>{group.tasks.length}</span>
+              <span class="task-doc-side">
+                <span class="status-count" data-doc-count>{group.tasks.length}</span>
+                <StatusBadge status={group.status} />
+              </span>
               <span class="path-row task-doc-path">
                 <span class="path-text">{displayPath(group.path)}</span>
                 <CopyPath path={group.path} />
@@ -50,7 +53,6 @@ const total = groups.reduce((n, g) => n + g.tasks.length, 0);
                   <span data-doc-when>{formatWhen(group.updatedAt)}</span>
                 ) : null}
               </span>
-              <StatusBadge status={group.status} />
             </summary>
             <div class="task-doc-body">
               {sectionRuns(group.tasks).map((run) => (

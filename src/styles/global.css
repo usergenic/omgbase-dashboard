@@ -778,7 +778,8 @@ html.diff-wrap .diff-body {
   color: var(--accent);
 }
 
-.task-doc > summary > .status-count {
+.task-doc > summary > .status-count,
+.task-doc > summary > .task-doc-side {
   grid-column: 3;
   grid-row: 1;
   justify-self: start;
@@ -1056,11 +1057,12 @@ html.diff-wrap .diff-body {
   color: #55617a;
 }
 
-/* Task-doc summaries are a grid; without placement the badge auto-flows into
-   row 3, column 1 (under the chevron). Pin it right-aligned below the path/time row. */
-.task-doc > summary > .badge-inline {
-  grid-column: 2 / -1;
-  grid-row: 3;
-  justify-self: end;
-  margin-top: 0.1rem;
+/* Count and status badge share the title row's third column. */
+.task-doc > summary > .task-doc-side {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
