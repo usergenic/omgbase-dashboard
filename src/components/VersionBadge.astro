@@ -1,0 +1,68 @@
+---
+/**
+ * `omgbase <version>` in the header. The version number is a disclosure: open
+ * it for everything the MCP `version` tool reports (engine, components, spec
+ * versions, schema, runtime, build).
+ */
+import { fetchVersion } from "../lib/version";
+
+const v = await fetchVersion();
+const rows: Array<[string, string]> = v
+  ? [
+      ["engine", v.engine ?? ""],
+      ["version", v.version ?? ""],
+      ["commit", v.commit ?? ""],
+      ["built", v.built ?? ""],
+      ["runtime", v.runtime ?? ""],
+      ["schema", v.schema !== undefined ? String(v.schema) : ""],
+      ["mcp", [v.mcp?.protocol, v.mcp?.sdk ? `sdk ${v.mcp.sdk}` : ""].filter(Boolean).join(" · ")],
+    ].filter(([, value]) => value !== "") as Array<[string, string]>
+  : [];
+const components = Object.entries(v?.components ?? {});
+const specs = Object.entries(v?.specs ?? {});
+---
+{v ? (
+  <details class="version-badge">
+    <summary title="omg server version — click for details">
+      {v.version ?? "?"}{v.engine ? <span class="version-engine"> {v.engine}</span> : null}
+    </summary>
+    <div class="version-pop">
+      <dl class="version-grid">
+        {rows.map(([k, val]) => (
+          <>
+            <dt>{k}</dt>
+            <dd>{val}</dd>
+          </>
+        ))}
+      </dl>
+      {components.length > 0 ? (
+        <>
+          <h4>components</h4>
+          <dl class="version-grid">
+            {components.map(([k, val]) => (
+              <>
+                <dt>{k}</dt>
+                <dd>{val}</dd>
+              </>
+            ))}
+          </dl>
+        </>
+      ) : null}
+      {specs.length > 0 ? (
+        <>
+          <h4>specs</h4>
+          <dl class="version-grid">
+            {specs.map(([k, val]) => (
+              <>
+                <dt>{k}</dt>
+                <dd>{val}</dd>
+              </>
+            ))}
+          </dl>
+        </>
+      ) : null}
+    </div>
+  </details>
+) : (
+  <span class="version-badge version-unknown" title="omg server unreachable">offline</span>
+)}

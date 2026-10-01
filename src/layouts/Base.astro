@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import { omgRepoName } from "../lib/omg";
+import VersionBadge from "../components/VersionBadge.astro";
 
 interface Props {
   title?: string;
@@ -47,7 +48,7 @@ const lastChangeLabel = (() => {
     <header class="site-header">
       <a class="brand" href="/">{repo}</a>
       <p class="tagline">
-        omgbase · live queries
+        omgbase <VersionBadge /> · live queries
         {lastChangeLabel ? (
           <>
             {" · "}

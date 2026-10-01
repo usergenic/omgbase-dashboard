@@ -950,3 +950,76 @@ html.diff-wrap .diff-body {
     animation: none !important;
   }
 }
+
+/* ---- Header version badge (components/VersionBadge.astro) ---- */
+
+.tagline {
+  position: relative;
+}
+
+.version-badge {
+  display: inline-block;
+  position: relative;
+}
+
+.version-badge > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: inline;
+  color: var(--accent);
+  border-bottom: 1px dotted currentColor;
+}
+
+.version-badge > summary::-webkit-details-marker {
+  display: none;
+}
+
+.version-engine {
+  color: var(--muted);
+}
+
+.version-unknown {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.version-pop {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 3;
+  width: min(28rem, calc(100vw - 3rem));
+  padding: 0.75rem 0.9rem;
+  background: #15201b;
+  color: #d8ebe6;
+  border-radius: 0.4rem;
+  box-shadow: 0 8px 28px rgba(20, 34, 28, 0.22);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.version-pop h4 {
+  margin: 0.65rem 0 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9fc0b4;
+}
+
+.version-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 0.9rem;
+  margin: 0;
+}
+
+.version-grid dt {
+  color: #9fc0b4;
+}
+
+.version-grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
