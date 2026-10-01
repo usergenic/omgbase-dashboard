@@ -1055,3 +1055,12 @@ html.diff-wrap .diff-body {
   background: #e6e9ef;
   color: #55617a;
 }
+
+/* Task-doc summaries are a grid; without placement the badge auto-flows into
+   row 3, column 1 (under the chevron). Pin it right-aligned below the path/time row. */
+.task-doc > summary > .badge-inline {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  justify-self: end;
+  margin-top: 0.1rem;
+}
