@@ -1,4 +1,5 @@
 ---
+import StatusBadge from "../StatusBadge.astro";
 import CopyPath from "../CopyPath.astro";
 import ProjectTasks from "../ProjectTasks.astro";
 import { displayPath, activityForProject, formatWhen, noteTitle } from "../../lib/notes";
@@ -63,6 +64,7 @@ const { byStatus, activityDocs, openTaskGroups, error } = Astro.props;
                             <span class="path-text">{displayPath(item.path)}</span>
                             <CopyPath path={item.path} />
                           </span>
+                          <StatusBadge status={item.status} />
                           {when ? <span>{when}</span> : null}
                         </span>
                       </li>

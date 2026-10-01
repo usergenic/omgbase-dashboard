@@ -26,6 +26,7 @@ export type ActivityItem = {
   docId?: string;
   slug: string;
   title: string;
+  status?: string;
   updatedAt?: string;
 };
 
@@ -191,6 +192,7 @@ export function toActivityItem(data: NoteData): ActivityItem {
     docId: data.docId,
     slug: data.slug,
     title: noteTitle(data),
+    ...(typeof data.status === "string" && data.status ? { status: data.status } : {}),
     updatedAt: noteUpdatedAt(data),
   };
 }

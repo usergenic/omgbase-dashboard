@@ -15,6 +15,8 @@ export type TaskDocGroup = {
   path: string;
   title: string;
   slug: string;
+  /** Frontmatter `status` of the owning note, when it has one. */
+  status?: string;
   updatedAt?: string;
   /** Outbound doc links from this note (for project backlink assignment). */
   outs?: string[];
@@ -101,6 +103,7 @@ type TaskHit = {
   checked?: unknown;
   $ordinal?: unknown;
   title?: unknown;
+  status?: unknown;
   updated?: unknown;
   headings?: unknown;
 };
@@ -126,10 +129,12 @@ function groupHits(hits: TaskHit[]): TaskBucket {
     const updatedAt = asString(hit.updated);
     let group = byPath.get(path);
     if (!group) {
+      const status = asString(hit.status);
       group = {
         path,
         title,
         slug: pathToSlug(path),
+        ...(status ? { status } : {}),
         updatedAt,
         tasks: [],
       };

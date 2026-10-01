@@ -9,7 +9,7 @@ export const ACTIVITY_LIMIT_PER_PROJECT = 10;
 
 export const queries = {
   recent: {
-    query: `select $path, $title, $updated_at from docs where !$path.startsWith("scratch/") order by $updated_at desc`,
+    query: `select $path, $title, $updated_at, status from docs where !$path.startsWith("scratch/") order by $updated_at desc`,
     limit: 40,
   },
   projects: {
@@ -17,7 +17,7 @@ export const queries = {
     limit: 200,
   },
   tracking: {
-    query: `select $path, $title, $updated_at from docs where tracking == true order by $updated_at desc`,
+    query: `select $path, $title, $updated_at, status from docs where tracking == true order by $updated_at desc`,
     limit: 50,
   },
   /**
@@ -25,12 +25,12 @@ export const queries = {
    * to project cards via hub backlinks + `projects/<slug>/` namespace.
    */
   activity: {
-    query: `select $path, $title, $updated_at, outs: doc.out collect { select $path } from docs where $updated_at > "${ACTIVITY_CUTOFF}" && !$path.startsWith("scratch/") order by $updated_at desc`,
+    query: `select $path, $title, $updated_at, status, outs: doc.out collect { select $path } from docs where $updated_at > "${ACTIVITY_CUTOFF}" && !$path.startsWith("scratch/") order by $updated_at desc`,
     limit: 300,
   },
   /** Every document; `/note/<slug>/` resolves any of them at request time. */
   notes: {
-    query: `select $path, $title, $updated_at from docs`,
+    query: `select $path, $title, $updated_at, status from docs`,
     limit: 5000,
   },
   /**
@@ -46,7 +46,7 @@ export const queries = {
    * `fetchTasks` in `lib/tasks.ts`.
    */
   tasks: {
-    query: `select $path, text, checked, $ordinal, title: doc.$title, updated: doc.$updated_at, headings: section collect { select name } from blocks where type == "task" && !$path.startsWith("scratch/") order by doc.$updated_at desc, $path asc, $ordinal asc`,
+    query: `select $path, text, checked, $ordinal, title: doc.$title, status: doc.status, updated: doc.$updated_at, headings: section collect { select name } from blocks where type == "task" && !$path.startsWith("scratch/") order by doc.$updated_at desc, $path asc, $ordinal asc`,
     limit: 2000,
   },
 } as const;

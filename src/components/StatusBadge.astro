@@ -1,0 +1,10 @@
+---
+/** A note's frontmatter `status`, when it has one. Colors by lifecycle family. */
+interface Props {
+  status?: string | null;
+  class?: string;
+}
+const { status, class: className } = Astro.props;
+const value = typeof status === "string" ? status.trim() : "";
+---
+{value ? <span class={["badge", "badge-inline", value, className].filter(Boolean).join(" ")}>{value}</span> : null}

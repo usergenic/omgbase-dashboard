@@ -1,4 +1,5 @@
 ---
+import StatusBadge from "../StatusBadge.astro";
 import CopyPath from "../CopyPath.astro";
 import DiffExcerpt from "../DiffExcerpt.astro";
 import { displayPath, formatWhen, noteTitle, noteUpdatedAt } from "../../lib/notes";
@@ -29,6 +30,7 @@ const lastChangeLabel = formatWhen(lastChange);
               <span class="path-text">{displayPath(data.path)}</span>
               <CopyPath path={data.path} />
             </span>
+            <StatusBadge status={data.status} />
             {when ? <span>{when}</span> : null}
           </span>
           {diff ? (

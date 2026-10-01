@@ -1,4 +1,5 @@
 ---
+import StatusBadge from "../StatusBadge.astro";
 import CopyPath from "../CopyPath.astro";
 import { displayPath, formatWhen, noteTitle, noteUpdatedAt } from "../../lib/notes";
 import { vtStyle } from "../../lib/vt";
@@ -26,6 +27,7 @@ const { tracking, error } = Astro.props;
               <span class="path-text">{displayPath(data.path)}</span>
               <CopyPath path={data.path} />
             </span>
+            <StatusBadge status={data.status} />
             {when ? <span>{when}</span> : null}
           </span>
         </li>

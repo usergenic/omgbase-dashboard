@@ -1,4 +1,5 @@
 ---
+import StatusBadge from "./StatusBadge.astro";
 import CopyPath from "./CopyPath.astro";
 import TaskCheckbox from "./TaskCheckbox.astro";
 import { displayPath, formatWhen } from "../lib/notes";
@@ -43,6 +44,7 @@ const { open, completed, truncated = false } = Astro.props;
                 <span class="item-title">{group.title}</span>
               </a>
               <span class="status-count" data-doc-count>{group.tasks.length}</span>
+              <StatusBadge status={group.status} />
               <span class="path-row task-doc-path">
                 <span class="path-text">{displayPath(group.path)}</span>
                 <CopyPath path={group.path} />
@@ -108,6 +110,7 @@ const { open, completed, truncated = false } = Astro.props;
                 <span class="item-title">{group.title}</span>
               </a>
               <span class="status-count" data-doc-count>{group.tasks.length}</span>
+              <StatusBadge status={group.status} />
               <span class="path-row task-doc-path">
                 <span class="path-text">{displayPath(group.path)}</span>
                 <CopyPath path={group.path} />

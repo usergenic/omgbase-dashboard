@@ -1023,3 +1023,35 @@ html.diff-wrap .diff-body {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* ---- Status badges on feed items (components/StatusBadge.astro) ---- */
+
+.badge-inline {
+  font-size: 0.62rem;
+  padding: 0.05rem 0.4rem;
+  vertical-align: middle;
+}
+
+/* Lifecycle families across types: project, design-note, workstream, task, creative-work. */
+.badge.done,
+.badge.executed,
+.badge.released,
+.badge.historical,
+.badge.observed {
+  background: #e2e8e4;
+  color: var(--ink-soft);
+}
+
+.badge.dropped,
+.badge.rejected,
+.badge.abandoned {
+  background: #ece7dc;
+  color: var(--warn);
+}
+
+.badge.idea,
+.badge.proposed,
+.badge.draft {
+  background: #e6e9ef;
+  color: #55617a;
+}
