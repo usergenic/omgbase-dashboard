@@ -3,6 +3,7 @@ import { getLiveEntry } from "astro:content";
 import Base from "../../layouts/Base.astro";
 import CopyPath from "../../components/CopyPath.astro";
 import {
+  displayPath,
   formatWhen,
   noteTitle,
   noteUpdatedAt,
@@ -64,7 +65,7 @@ if (entry && data) {
     {data ? (
       <p class="note-meta">
         <span class="path-row">
-          <span class="path-text">{data.path}</span>
+          <span class="path-text">{displayPath(data.path)}</span>
           <CopyPath path={data.path} />
         </span>
         {data.status ? <span>· {data.status}</span> : null}

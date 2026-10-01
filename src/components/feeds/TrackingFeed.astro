@@ -1,6 +1,6 @@
 ---
 import CopyPath from "../CopyPath.astro";
-import { formatWhen, noteTitle, noteUpdatedAt } from "../../lib/notes";
+import { displayPath, formatWhen, noteTitle, noteUpdatedAt } from "../../lib/notes";
 import { vtStyle } from "../../lib/vt";
 import type { TrackingFeedData } from "../../lib/home";
 
@@ -23,7 +23,7 @@ const { tracking, error } = Astro.props;
           </a>
           <span class="item-meta">
             <span class="path-row">
-              <span class="path-text">{data.path}</span>
+              <span class="path-text">{displayPath(data.path)}</span>
               <CopyPath path={data.path} />
             </span>
             {when ? <span>{when}</span> : null}

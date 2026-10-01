@@ -29,10 +29,20 @@ export type ActivityItem = {
   updatedAt?: string;
 };
 
+/**
+ * Display form of a vault path. Journal filenames use U+1804 MONGOLIAN COLON
+ * between HH and MM because `:` is not filesystem-safe; render it as a plain
+ * colon. Visual only — hrefs, copy buttons and data attributes keep the real
+ * path.
+ */
+export function displayPath(path: string): string {
+  return path.replace(/\u1804/g, ":");
+}
+
 export function noteTitle(data: NoteData): string {
   if (typeof data.title === "string" && data.title.length > 0) return data.title;
   if (typeof data.$title === "string" && data.$title.length > 0) return data.$title;
-  return data.path.replace(/\.md$/i, "");
+  return displayPath(data.path.replace(/\.md$/i, ""));
 }
 
 /**

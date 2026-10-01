@@ -1,7 +1,7 @@
 ---
 import CopyPath from "./CopyPath.astro";
 import TaskCheckbox from "./TaskCheckbox.astro";
-import { formatWhen } from "../lib/notes";
+import { displayPath, formatWhen } from "../lib/notes";
 import { sectionRuns, type TaskBucket } from "../lib/tasks";
 import { vtStyle } from "../lib/vt";
 
@@ -44,7 +44,7 @@ const { open, completed, truncated = false } = Astro.props;
               </a>
               <span class="status-count" data-doc-count>{group.tasks.length}</span>
               <span class="path-row task-doc-path">
-                <span class="path-text">{group.path}</span>
+                <span class="path-text">{displayPath(group.path)}</span>
                 <CopyPath path={group.path} />
                 {formatWhen(group.updatedAt) ? (
                   <span data-doc-when>{formatWhen(group.updatedAt)}</span>
@@ -109,7 +109,7 @@ const { open, completed, truncated = false } = Astro.props;
               </a>
               <span class="status-count" data-doc-count>{group.tasks.length}</span>
               <span class="path-row task-doc-path">
-                <span class="path-text">{group.path}</span>
+                <span class="path-text">{displayPath(group.path)}</span>
                 <CopyPath path={group.path} />
                 {formatWhen(group.updatedAt) ? (
                   <span data-doc-when>{formatWhen(group.updatedAt)}</span>

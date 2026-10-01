@@ -1,7 +1,7 @@
 ---
 import CopyPath from "../CopyPath.astro";
 import ProjectTasks from "../ProjectTasks.astro";
-import { activityForProject, formatWhen, noteTitle } from "../../lib/notes";
+import { displayPath, activityForProject, formatWhen, noteTitle } from "../../lib/notes";
 import { tasksForProject } from "../../lib/tasks";
 import { vtStyle } from "../../lib/vt";
 import type { ProjectsFeedData } from "../../lib/home";
@@ -44,7 +44,7 @@ const { byStatus, activityDocs, openTaskGroups, error } = Astro.props;
               </a>
               <span class="item-meta">
                 <span class="path-row">
-                  <span class="path-text">{data.path}</span>
+                  <span class="path-text">{displayPath(data.path)}</span>
                   <CopyPath path={data.path} />
                 </span>
               </span>
@@ -60,7 +60,7 @@ const { byStatus, activityDocs, openTaskGroups, error } = Astro.props;
                         </a>
                         <span class="item-meta">
                           <span class="path-row">
-                            <span class="path-text">{item.path}</span>
+                            <span class="path-text">{displayPath(item.path)}</span>
                             <CopyPath path={item.path} />
                           </span>
                           {when ? <span>{when}</span> : null}

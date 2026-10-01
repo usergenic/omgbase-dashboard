@@ -131,7 +131,7 @@
       pathRow.className = "path-row task-doc-path";
       var pathText = document.createElement("span");
       pathText.className = "path-text";
-      pathText.textContent = meta.path;
+      pathText.textContent = meta.path.replace(/\u1804/g, ":");
       pathRow.appendChild(pathText);
       var when = formatWhen(meta.updated);
       if (when) {
